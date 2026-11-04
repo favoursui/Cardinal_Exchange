@@ -19,9 +19,6 @@
 .tokenPicker { display: flex; align-items: center; flex-shrink: 0; gap: 6px; padding: 5px 0; color: #f6f6f8; font-size: 13px; font-weight: 500; border-radius: 5px; cursor: pointer; }
 .tokenPicker:hover { color: #7bb7ff; }
 .tokenMark { display: inline-grid; place-items: center; flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; font-size: 13px; font-weight: 600; color: #fff; }
-.wqms { background: #6b9be2; }
-.usdc { background: #2775ca; box-shadow: inset 0 0 0 2px #7dbff08a; }
-.weth { background: #6f7eda; }
 .balanceRow { display: flex; justify-content: space-between; color: #aaaab6; font-size: 11px; line-height: 18px; }
 .balanceRow button { font-size: 10px; color: #3db8ef; margin-left: 5px; padding: 0 3px; background: #1c303d; border-radius: 2px; cursor: not-allowed; }
 .switchDivider { position: relative; height: 5px; }
@@ -81,7 +78,6 @@
 .tokenOption:hover, .tokenOption[aria-pressed="true"] { background: #303f52; }
 .tokenOption:focus-visible { outline-offset: -2px; }
 .tokenOption > .tokenMark { width: 36px; height: 36px; font-size: 25px; font-weight: 400; }
-.tokenOption > .usdc { box-shadow: inset 0 0 0 5px #3f7cc5, inset 0 0 0 6px #fff; }
 .tokenIdentity { display: flex; flex-direction: column; min-width: 0; gap: 2px; font-size: 14px; font-weight: 500; }
 .tokenOption[aria-pressed="true"] .tokenIdentity > span:first-child { color: #7bb7ff; }
 .tokenFullName { color: #8190a6; font-size: 12px; font-weight: 400; letter-spacing: .2px; }

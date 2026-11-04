@@ -1,11 +1,10 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { TokenLogo } from "@/components/ui/token-logo";
+import { tokens, tokenMetadata, type Token } from "@/lib/config/tokens";
 import styles from "./exchange-card.module.css";
 
-// Display choices only. Execution must use the backend's verified token registry.
-const tokens = ["WQMS", "USDC", "WETH"] as const;
-type Token = (typeof tokens)[number];
 type IconName = "settings" | "refresh" | "switch" | "gas" | "wallet";
 
 function Icon({ name }: { name: IconName }) {
@@ -20,10 +19,8 @@ function Icon({ name }: { name: IconName }) {
 }
 
 function TokenMark({ token }: { token: Token }) {
-  return <span aria-hidden="true" className={`${styles.tokenMark} ${styles[token.toLowerCase()]}`}>{token === "USDC" ? "$" : token === "WETH" ? "♦" : "Q"}</span>;
+  return <TokenLogo symbol={token} className={styles.tokenMark} />;
 }
-
-const tokenNames: Record<Token, string> = { WQMS: "Wrapped QMS", USDC: "USD Coin", WETH: "Wrapped Ether" };
 
 function TokenPicker({ token, label, onChange }: { token: Token; label: string; onChange: (token: Token) => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -31,7 +28,7 @@ function TokenPicker({ token, label, onChange }: { token: Token; label: string; 
   const search = useRef<HTMLInputElement>(null);
   const headingId = useId();
   const [query, setQuery] = useState("");
-  const matchingTokens = tokens.filter(value => `${value} ${tokenNames[value]}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const matchingTokens = tokens.filter(value => `${value} ${tokenMetadata[value].name} ${tokenMetadata[value].address}`.toLowerCase().includes(query.trim().toLowerCase()));
 
   function openPicker() {
     setQuery("");
@@ -65,7 +62,7 @@ function TokenPicker({ token, label, onChange }: { token: Token; label: string; 
             <li key={value}>
               <button type="button" className={styles.tokenOption} aria-pressed={token === value} onClick={() => { onChange(value); dialog.current?.close(); }}>
                 <TokenMark token={value} />
-                <span className={styles.tokenIdentity}><span>{value}</span><span className={styles.tokenFullName}>{tokenNames[value]}</span></span>
+                <span className={styles.tokenIdentity}><span>{value}</span><span className={styles.tokenFullName}>{tokenMetadata[value].name}</span></span>
                 <span className={styles.tokenBalance} aria-label="Balance unavailable until wallet is connected"><span>—</span><span>Balance</span></span>
               </button>
             </li>
@@ -109,7 +106,7 @@ export function ExchangeCard() {
 
       <div className={styles.amountGroup}>
         <div className={styles.amountPanel}>
-          <div className={styles.networkRow}><label htmlFor="swap-amount">From</label><span className={styles.chainMark} aria-hidden="true">Q</span><span>QMS</span><span className={styles.testnet}>Testnet</span></div>
+          <div className={styles.networkRow}><label htmlFor="swap-amount">From</label><TokenLogo symbol="QMS" className={styles.chainMark} /><span>QMS</span><span className={styles.testnet}>Testnet</span></div>
           <div className={styles.amountRow}>
             <input id="swap-amount" aria-label={`Amount of ${inputToken} to swap`} value={amount} placeholder="0.00" inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={79} onChange={event => { if (/^\d*(\.\d*)?$/.test(event.target.value)) setAmount(event.target.value); }} />
             <TokenPicker token={inputToken} label="From token" onChange={token => chooseToken("input", token)} />
@@ -122,7 +119,7 @@ export function ExchangeCard() {
         </div>
 
         <div className={styles.amountPanel}>
-          <div className={styles.networkRow}><span>To</span><span className={styles.chainMark} aria-hidden="true">Q</span><span>QMS</span><span className={styles.testnet}>Testnet</span></div>
+          <div className={styles.networkRow}><span>To</span><TokenLogo symbol="QMS" className={styles.chainMark} /><span>QMS</span><span className={styles.testnet}>Testnet</span></div>
           <div className={styles.amountRow}>
             <output aria-label="Estimated output amount" className={styles.output}>0.00</output>
             <TokenPicker token={outputToken} label="To token" onChange={token => chooseToken("output", token)} />

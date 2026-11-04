@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TokenLogo } from "@/components/ui/token-logo";
 
 function Chevron() {
   return <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -37,7 +38,7 @@ export function Navbar() {
 
         <div className="nav-actions">
           <span className="network-pill" title="QMS testnet">
-            <span className="network-mark" aria-hidden="true">Q</span>
+            <TokenLogo symbol="QMS" className="network-mark" />
             <span>QMS <span className="network-testnet">Testnet</span></span>
           </span>
           <button className="settings-button" disabled aria-label="Settings (coming soon)" title="Coming soon">
