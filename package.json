@@ -8,7 +8,8 @@
     "start": "next start --hostname 127.0.0.1 --port 3000",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "tunnel": "ngrok http 3000"
+    "tunnel": "ngrok http 3000",
+    "test:wallet": "node --test scripts/wallet.test.mjs"
   },
   "dependencies": {
     "next": "16.4.4",

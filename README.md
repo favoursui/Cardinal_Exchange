@@ -1,6 +1,6 @@
 # Cardinal frontend
 
-Next.js App Router, React, TypeScript and Tailwind CSS. This is the structure only: wallet connection, quoting, signing, liquidity screens and API integration are not implemented yet. The placeholder page will be replaced with the supplied UI.
+Next.js App Router, React, TypeScript and Tailwind CSS. The swap UI includes live backend quotes and browser wallet connection. Transaction signing/submission, live token balances and liquidity screens remain pending.
 
 ## Run
 
@@ -36,7 +36,7 @@ public/
   icons/               Static icon assets
 ```
 
-Feature folders are intentionally empty until implementation. Use the `@/*` alias for imports from `src/`. Keep pages thin and feature logic in its feature folder. Keep token amounts as decimal strings or bigint, not floating-point numbers.
+Use the `@/*` alias for imports from `src/`. Keep pages thin and feature logic in its feature folder. Keep token amounts as decimal strings or bigint, not floating-point numbers.
 
 ## Environment
 
@@ -47,6 +47,7 @@ Copy `.env.example` to `.env.local` when wiring the API. Frontend environment fi
 ```sh
 npm run lint
 npm run typecheck
+npm run test:wallet
 npm run build
 ```
 
@@ -61,4 +62,12 @@ npm start
 npm run tunnel
 ```
 
-`tunnel` runs `ngrok http 3000`. No tunnel is started by default. Browser API requests need a reachable HTTPS backend URL (localhost points to the viewer's computer); set `NEXT_PUBLIC_API_BASE_URL` before building and set the backend `CORS_ORIGIN` to the exact ngrok frontend origin. The API connection is still to be implemented. Stop ngrok when the preview is over.
+`tunnel` runs `ngrok http 3000`. No tunnel is started by default. Browser API requests need a reachable HTTPS backend URL (localhost points to the viewer's computer); set `NEXT_PUBLIC_API_BASE_URL` before building and set the backend `CORS_ORIGIN` to the exact ngrok frontend origin. Stop ngrok when the preview is over.
+
+## Wallet connection
+
+Connect wallet opens a chooser for installed browser wallets using [EIP-6963 discovery](https://eips.ethereum.org/EIPS/eip-6963), with an EIP-1193 window.ethereum fallback. It also works in wallet browsers exposing a compatible provider. QR-based WalletConnect sessions are not integrated. No signing request is made when connecting, and no keys or wallet permissions are stored by the app. Reloading requires connecting again.
+
+The navbar displays the connected account; the swap card uses the same account and network state. Account changes, chain changes, permission removal and provider disconnects update the UI. A wallet on another chain can explicitly switch to QMS Testnet (19480); if missing, the wallet is asked to add it using the public NEXT_PUBLIC_QMS_RPC_URL and NEXT_PUBLIC_QMS_EXPLORER_URL configuration. Both default to the public testnet endpoints. No backend RPC credentials should be used in browser configuration.
+
+Disconnect clears the local connection; it does not revoke the wallet's site permissions or cancel an already-open wallet prompt. Those are controlled in the wallet. Swap submission stays disabled until its approval, transaction review and signing flow is implemented.

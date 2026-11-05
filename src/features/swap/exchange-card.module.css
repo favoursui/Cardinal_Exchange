@@ -2,9 +2,27 @@
 .heading { display: flex; align-items: center; justify-content: space-between; margin: 0 0 15px; }
 .heading h1, .heading h2 { font-size: 18px; font-weight: 600; letter-spacing: -.4px; }
 .tools { display: flex; gap: 6px; }
-.iconButton { display: grid; place-items: center; height: 30px; width: 30px; border: 1px solid #ffffff04; border-radius: 50%; background: #19191e; color: #eef1f6; cursor: pointer; }
-.iconButton:first-child { color: #3caddf; }
+.iconButton { display: grid; place-items: center; height: 30px; width: 30px; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #eef1f6; cursor: pointer; }
 .iconButton:disabled { cursor: not-allowed; opacity: .65; }
+
+.iconButton { transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease; }
+.iconButton > svg { transition: transform 350ms ease; transform-origin: center; }
+.iconButton:not(:disabled):focus-visible { transform: translateY(-1px); }
+.iconButton[aria-label="Transaction history"]:focus-visible > svg { transform: rotate(180deg); }
+.iconButton[aria-label="Refresh quote"]:not(:disabled):focus-visible > svg { transform: rotate(180deg); }
+.iconButton[aria-label="Swap settings"]:not(:disabled):focus-visible > svg { transform: rotate(180deg); }
+@media (hover: hover) {
+  .iconButton:not(:disabled):hover { background: #ffffff05; border-color: #ffffff08; transform: translateY(-1px); }
+  .iconButton[aria-label="Transaction history"]:hover > svg { transform: rotate(180deg); }
+  .iconButton[aria-label="Refresh quote"]:not(:disabled):hover > svg { transform: rotate(180deg); }
+  .iconButton[aria-label="Swap settings"]:not(:disabled):hover > svg { transform: rotate(180deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iconButton, .iconButton > svg { transition: none; }
+  .iconButton:not(:disabled):is(:hover, :focus-visible),
+  .iconButton[aria-label]:not(:disabled):is(:hover, :focus-visible) > svg { transform: none; }
+}
+
 .amountGroup { position: relative; border-radius: 9px; overflow: visible; }
 .amountPanel { background: #1e1e23; padding: 14px 12px 13px; }
 .amountPanel:first-child { border-radius: 8px 8px 0 0; }
@@ -92,3 +110,5 @@
 .settingsDialog .slippageHint, .settingsDialog .slippageError { margin: 8px 0 0; font-size: 11px; }
 .settingsDialog .slippageError { color: #ff9b9b; }
 .saveButton:disabled { opacity: .45; cursor: not-allowed; }
+
+.submit:not(:disabled) { cursor: pointer; }
