@@ -1,10 +1,15 @@
 "use client";
 
+import { useTradingSettings } from "@/features/trading/settings";
+import { useBalances, useCapabilities } from "@/features/trading/use-trading-data";
+import { ReviewButton } from "@/features/trading/review-button";
+import type { Intent } from "@/features/trading/validation";
+import { TransactionHistory } from "@/features/history/transaction-history";
 import { useWallet, shortAddress } from "@/features/wallet/wallet-provider";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { TokenLogo } from "@/components/ui/token-logo";
 import { tokens, tokenMetadata, type Token } from "@/lib/config/tokens";
-import { displayUnits, useRouteQuote } from "./use-route-quote";
+import { baseUnits, displayUnits, useRouteQuote } from "./use-route-quote";
 import styles from "./exchange-card.module.css";
 
 type IconName = "history" | "settings" | "refresh" | "switch" | "gas" | "wallet";
@@ -25,7 +30,7 @@ function TokenMark({ token }: { token: Token }) {
   return <TokenLogo symbol={token} className={styles.tokenMark} />;
 }
 
-function TokenPicker({ token, label, onChange }: { token: Token; label: string; onChange: (token: Token) => void }) {
+function TokenPicker({ token, label, onChange, balances }: { token: Token; label: string; onChange: (token: Token) => void; balances: Partial<Record<Token, string>> }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const search = useRef<HTMLInputElement>(null);
@@ -52,21 +57,26 @@ function TokenPicker({ token, label, onChange }: { token: Token; label: string; 
         if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.current?.close();
       }}>
         <div className={styles.tokenDialogHeader}>
-          <h2 id={headingId}>Select a token</h2>
+          <h2 id={headingId}>Select token</h2>
           <button type="button" className={styles.tokenDialogClose} onClick={() => dialog.current?.close()} aria-label="Close token selection">
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
           </button>
         </div>
         <div className={styles.tokenSearchArea}>
-          <input ref={search} className={styles.tokenSearch} aria-label="Search tokens" placeholder="Search Token" value={query} onChange={event => setQuery(event.target.value)} autoComplete="off" spellCheck={false} />
+          <svg className={styles.tokenSearchIcon} aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
+          <input ref={search} className={styles.tokenSearch} aria-label="Search tokens" placeholder="Search name, ticker, or address" value={query} onChange={event => setQuery(event.target.value)} autoComplete="off" spellCheck={false} />
         </div>
-        <ul className={styles.tokenList} aria-label="Available tokens">
+        <p className={styles.tokenListHeading}>Listed tokens</p>
+        <ul className={styles.tokenList} aria-label="Listed tokens">
           {matchingTokens.map(value => (
             <li key={value}>
               <button type="button" className={styles.tokenOption} aria-pressed={token === value} onClick={() => { onChange(value); dialog.current?.close(); }}>
                 <TokenMark token={value} />
-                <span className={styles.tokenIdentity}><span>{value}</span><span className={styles.tokenFullName}>{tokenMetadata[value].name}</span></span>
-                <span className={styles.tokenBalance} aria-label="Balance unavailable until wallet is connected"><span>—</span><span>Balance</span></span>
+                <span className={styles.tokenIdentity}>
+                  <span className={styles.tokenName}>{tokenMetadata[value].name}</span>
+                  <span className={styles.tokenFullName}>{value}{value !== "QMS" && <span className={styles.tokenAddress} title={tokenMetadata[value].address}> · {shortAddress(tokenMetadata[value].address)}</span>}</span>
+                </span>
+                <span className={styles.tokenBalance} aria-label={balances[value] === undefined ? "Balance unavailable" : "Token balance"}><span>{balances[value] === undefined ? "—" : displayUnits(balances[value]!, tokenMetadata[value].decimals)}</span><span>—</span></span>
               </button>
             </li>
           ))}
@@ -79,14 +89,17 @@ function TokenPicker({ token, label, onChange }: { token: Token; label: string; 
 
 export function ExchangeCard() {
   const wallet = useWallet();
+  const balanceState = useBalances(wallet.account);
+  const capabilities = useCapabilities();
+  const [maxError, setMaxError] = useState("");
+  const [routesOpen, setRoutesOpen] = useState(false);
   const [inputToken, setInputToken] = useState<Token>("QMS");
   const [outputToken, setOutputToken] = useState<Token>("USDC");
   const [amount, setAmount] = useState("");
-  const [slippage, setSlippage] = useState("0.5");
-  const [draftSlippage, setDraftSlippage] = useState("0.5");
-  const validSlippage = /^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(draftSlippage) && Number(draftSlippage) >= 0 && Number(draftSlippage) <= 5;
-  const settings = useRef<HTMLDialogElement>(null);
+  const settings = useTradingSettings();
+  const slippage = settings.slippage;
   const history = useRef<HTMLDialogElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const historyButton = useRef<HTMLButtonElement>(null);
   const conversion = inputToken === "QMS" && outputToken === "WQMS" ? "Wrap" : inputToken === "WQMS" && outputToken === "QMS" ? "Unwrap" : null;
   const conversionAmount = /^\d+(?:\.\d{1,18})?$/.test(amount) ? amount : "0.00";
@@ -94,6 +107,27 @@ export function ExchangeCard() {
   const route = useRouteQuote(inputToken, outputToken, amount, slippage, !!conversion);
   const routeName = route.quote?.venueName ?? "Awaiting quote";
   const estimatedOutput = route.quote ? displayUnits(route.quote.amountOut, tokenMetadata[outputToken].decimals) : "0.00";
+
+  const inputBalance = balanceState.balances[inputToken], outputBalance = balanceState.balances[outputToken];
+  const amountIn = baseUnits(amount, tokenMetadata[inputToken].decimals);
+  const intent: Intent | null = conversion && amountIn ? {kind: conversion === "Wrap" ? "wrap" : "unwrap", amount: amountIn} : route.quote ? {kind: "swap", quote: route.quote} : null;
+  const complete = () => { balanceState.refresh(); route.refresh(); };
+  const maxContext = useRef("");
+  useEffect(() => { maxContext.current = `${wallet.account}:${inputToken}`; }, [wallet.account, inputToken]);
+  const fillMax = async () => {
+    const context = `${wallet.account}:${inputToken}`;
+    setMaxError("");
+    if (inputBalance === undefined) return;
+    if (inputToken !== "QMS") { setAmount(displayUnits(inputBalance, tokenMetadata[inputToken].decimals)); return; }
+    try {
+      const price = await wallet.readRpc("eth_gasPrice");
+      if (typeof price !== "string" || !/^0x[0-9a-f]+$/i.test(price) || BigInt(price) <= BigInt(0)) throw new Error("Gas price unavailable.");
+      const reserve = BigInt(price) * BigInt(2) * BigInt(6_500_000);
+      const available = BigInt(inputBalance) - reserve;
+      if (available <= BigInt(0)) throw new Error("Balance is too low after reserving QMS for gas.");
+      if (maxContext.current === context) setAmount(displayUnits(available.toString(), 18));
+    } catch (e) { setMaxError(e instanceof Error ? e.message : "Could not reserve gas."); }
+  };
 
   function chooseToken(side: "input" | "output", token: Token) {
     if (side === "input") {
@@ -111,9 +145,9 @@ export function ExchangeCard() {
       <div className={styles.heading}>
         <h1 id="exchange-title">{conversion ?? "Exchange"}</h1>
         <div className={styles.tools}>
-          <button ref={historyButton} type="button" className={styles.iconButton} onClick={() => history.current?.showModal()} aria-label="Transaction history" aria-haspopup="dialog" title="Transaction history"><Icon name="history" /></button>
+          <button ref={historyButton} type="button" className={styles.iconButton} onClick={() => { setHistoryOpen(true); history.current?.showModal(); }} aria-label="Transaction history" aria-haspopup="dialog" title="Transaction history"><Icon name="history" /></button>
           <button type="button" className={styles.iconButton} disabled={!route.enabled} onClick={route.refresh} aria-label="Refresh quote" title="Refresh quote"><Icon name="refresh" /></button>
-          <button type="button" className={styles.iconButton} disabled={!!conversion} onClick={() => { setDraftSlippage(slippage); settings.current?.showModal(); }} aria-label="Swap settings"><Icon name="settings" /></button>
+          <button type="button" className={styles.iconButton} disabled={!!conversion} onClick={settings.open} aria-label="Swap settings"><Icon name="settings" /></button>
         </div>
       </div>
 
@@ -122,9 +156,9 @@ export function ExchangeCard() {
           <div className={styles.networkRow}><label htmlFor="swap-amount">From</label></div>
           <div className={styles.amountRow}>
             <input id="swap-amount" aria-label={`Amount of ${inputToken} to swap`} value={amount} placeholder="0.00" inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={79} onChange={event => { if (/^\d*(\.\d*)?$/.test(event.target.value)) setAmount(event.target.value); }} />
-            <TokenPicker token={inputToken} label="From token" onChange={token => chooseToken("input", token)} />
+            <TokenPicker token={inputToken} label="From token" onChange={token => chooseToken("input", token)} balances={balanceState.balances} />
           </div>
-          <div className={styles.balanceRow}><span>— USD</span><span>Balance: — <button type="button" disabled title="Connect a wallet to use your balance">MAX</button></span></div>
+          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {inputBalance === undefined ? "—" : displayUnits(inputBalance, tokenMetadata[inputToken].decimals)} <button type="button" disabled={inputBalance === undefined || !wallet.correctNetwork} onClick={() => void fillMax()} title={inputToken === "QMS" ? "Reserve a conservative gas budget" : "Use token balance"}>MAX</button></span></div>
         </div>
 
         <div className={styles.switchDivider}>
@@ -135,9 +169,9 @@ export function ExchangeCard() {
           <div className={styles.networkRow}><span>To</span></div>
           <div className={styles.amountRow}>
             <output aria-label="Estimated output amount" className={styles.output}>{conversion ? conversionAmount : estimatedOutput}</output>
-            <TokenPicker token={outputToken} label="To token" onChange={token => chooseToken("output", token)} />
+            <TokenPicker token={outputToken} label="To token" onChange={token => chooseToken("output", token)} balances={balanceState.balances} />
           </div>
-          <div className={styles.balanceRow}><span>— USD</span><span>Balance: —</span></div>
+          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {outputBalance === undefined ? "—" : displayUnits(outputBalance, tokenMetadata[outputToken].decimals)}</span></div>
         </div>
         <div className={styles.recipient}><Icon name="wallet" /><span title={wallet.account ?? undefined}>{wallet.account ? shortAddress(wallet.account) : "No wallet connected"}</span></div>
       </div>
@@ -157,7 +191,7 @@ export function ExchangeCard() {
       </div> : <div className={styles.routeSection}>
         <div className={styles.routeHeading}><span>Swap route</span><span className={styles.routeStatus} role="status">{route.status}</span></div>
         <div className={styles.routeCard}>
-          {route.quote && <span className={styles.bestReturnTag}>Best Return</span>}
+          {route.quote && route.best && <span className={styles.bestReturnTag}>Best Return</span>}
           <div className={styles.routeSummary}><strong>{route.quote ? routeName : "Find your best route"}</strong><span>{route.quote ? estimatedOutput : "—"} {outputToken}</span></div>
           <p>Compare available exchanges before you swap.</p>
           <div className={styles.routePath} aria-label={`${inputToken} through ${routeName} to ${outputToken}`}>
@@ -168,32 +202,26 @@ export function ExchangeCard() {
             <span className={styles.routeToken}><TokenMark token={outputToken} />{outputToken}</span>
           </div>
         </div>
-        <div className={styles.routeFooter}><span>Slippage: {slippage}%</span><button disabled type="button">See all routes <span aria-hidden="true">›</span></button></div>
+        <div className={styles.routeFooter}><span>Slippage: {slippage}%</span><button disabled={!route.quotes.length} type="button" onClick={() => setRoutesOpen(open => !open)}>{routesOpen ? "Hide routes" : "See all routes"} <span aria-hidden="true">›</span></button></div>
+        {routesOpen && <div className={styles.routeChoices}>{route.quotes.map(quote => <button key={quote.quoteId} type="button" aria-pressed={route.quote?.quoteId === quote.quoteId} onClick={() => route.select(quote.venue)}><span>{quote.venueName}</span><span>{displayUnits(quote.amountOut, tokenMetadata[outputToken].decimals)} {outputToken}</span></button>)}</div>}
       </div>}
 
-      <button type="button" disabled={!!wallet.account && wallet.correctNetwork && !wallet.busy} className={styles.submit} onClick={wallet.open} title={wallet.account && wallet.correctNetwork ? "Transaction submission is not connected yet" : "Open wallet connection"}>{wallet.busy ? "Check your wallet" : !wallet.account ? "Connect wallet" : !wallet.correctNetwork ? "Switch to QMS Testnet" : "Swapping coming soon"}</button>
+      {maxError && <p role="alert">{maxError}</p>}
+      {capabilities.error && <p role="alert">{capabilities.error}</p>}
+      {capabilities.ready && !capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation") && <p className={styles.notice}>Preparation is disabled on the API.</p>}
+      {inputToken === "QMS" && <p className={styles.notice}>MAX reserves a conservative gas budget. Unused gas stays in your wallet.</p>}
+      <ReviewButton key={`${wallet.account}:${wallet.chainId}`} intent={intent} enabled={capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation")} label={conversion ? `Review ${conversion.toLowerCase()}` : "Review swap"} onComplete={complete} />
 
-      <dialog ref={history} className={styles.settingsDialog} aria-labelledby="history-title" onClose={() => historyButton.current?.focus()} onClick={event => {
+      <dialog ref={history} className={`${styles.settingsDialog} ${styles.historyDialog}`} aria-labelledby="history-title" onClose={() => { setHistoryOpen(false); historyButton.current?.focus(); }} onClick={event => {
         if (event.target !== event.currentTarget) return;
         const rect = event.currentTarget.getBoundingClientRect();
         if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) history.current?.close();
       }}>
         <div className={styles.heading}><h2 id="history-title">Transaction history</h2><button className={styles.closeButton} type="button" aria-label="Close transaction history" onClick={() => history.current?.close()}>×</button></div>
-        <p>Transaction history will be available when swaps are enabled.</p>
+        {historyOpen && <TransactionHistory key={`${wallet.account ?? "disconnected"}:${wallet.chainId}`} onConnect={() => { history.current?.close(); setTimeout(wallet.open, 0); }} />}
       </dialog>
 
-      <dialog ref={settings} className={styles.settingsDialog} aria-labelledby="settings-title" onClick={event => { if (event.target === event.currentTarget) settings.current?.close(); }}>
-        <div className={styles.heading}><h2 id="settings-title">Swap settings</h2><button className={styles.closeButton} type="button" aria-label="Close settings" onClick={() => settings.current?.close()}>×</button></div>
-        <fieldset><legend>Slippage tolerance</legend><p>Your swap will revert if the price changes beyond this limit.</p><div className={styles.slippageOptions}>{["0.1", "0.5", "1"].map(value => <button type="button" key={value} aria-pressed={validSlippage && Number(draftSlippage) === Number(value)} onClick={() => setDraftSlippage(value)}>{value}%</button>)}</div>
-          <label className={styles.customSlippageLabel} htmlFor="custom-slippage">Custom tolerance</label>
-          <div className={styles.customSlippageField}>
-            <input id="custom-slippage" inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={8} value={draftSlippage} onChange={event => setDraftSlippage(event.target.value)} aria-invalid={!validSlippage} aria-describedby="slippage-help" />
-            <span aria-hidden="true">%</span>
-          </div>
-          <p id="slippage-help" className={validSlippage ? styles.slippageHint : styles.slippageError} aria-live="polite">{validSlippage ? "Allowed range: 0–5%, with up to 2 decimal places." : "Enter a value from 0 to 5 with up to 2 decimal places."}</p>
-        </fieldset>
-        <button type="button" className={styles.saveButton} disabled={!validSlippage} onClick={() => { if (validSlippage) { setSlippage(String(Number(draftSlippage))); settings.current?.close(); } }}>Done</button>
-      </dialog>
+
     </section>
   );
 }

@@ -79,27 +79,40 @@
 
 .bestReturnTag { position: absolute; top: -13px; left: -1px; display: inline-flex; align-items: center; min-height: 20px; padding: 2px 5px; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 500; line-height: 14px; white-space: nowrap; }
 
-.tokenDialog { margin: auto; padding: 0; width: min(448px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #2a3038; border-radius: 17px; background: #1c2025; color: #f0f1f4; box-shadow: 0 22px 80px #0006; }
-.tokenDialog::backdrop { background: #000b; backdrop-filter: blur(5px); }
-.tokenDialogHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 23px; min-height: 65px; border-bottom: 1px solid #282d34; }
-.tokenDialogHeader h2 { font-size: 16px; font-weight: 600; letter-spacing: .1px; }
-.tokenDialogClose { display: grid; place-items: center; width: 26px; height: 26px; color: #8293ab; border-radius: 6px; cursor: pointer; }
-.tokenDialogClose:hover { color: #e6edf8; background: #2c333c; }
-.tokenSearchArea { padding: 23px 23px 20px; }
-.tokenSearch { display: block; width: 100%; min-width: 0; height: 55px; padding: 0 16px; border: 1px solid #2d323b; border-radius: 20px; background: #24282e; color: #e9edf4; font-size: 16px; letter-spacing: .2px; }
-.tokenSearch::placeholder { color: #77869c; opacity: 1; }
+.tokenDialog { margin: auto; padding: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #2a3038; border-radius: 9px; background: #191f27; color: #f0f1f4; box-shadow: 0 22px 80px #0006; }
+.tokenDialog::backdrop { background: #080d12bb; backdrop-filter: blur(4px); }
+.tokenDialogHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 16px 18px; }
+.tokenDialogHeader h2 { font-size: 20px; font-weight: 400; }
+.tokenDialogClose { display: grid; place-items: center; width: 28px; height: 28px; color: #e6edf8; border-radius: 4px; cursor: pointer; }
+.tokenDialogClose:hover { background: #ffffff08; }
+.tokenSearchArea { position: relative; margin: 0 20px 21px; }
+.tokenSearchIcon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #8b9aad; pointer-events: none; }
+.tokenSearch { display: block; width: 100%; min-width: 0; height: 48px; padding: 0 12px 0 30px; border: 1px solid #5a6778; border-radius: 4px; background: #242b35; color: #e9edf4; font-size: 14px; }
+.tokenSearch::placeholder { color: #7d8da3; opacity: 1; }
 .tokenSearch:focus-visible { outline: 1px solid var(--accent); outline-offset: 0; }
-.tokenList { margin: 0; padding: 0 8px 8px; list-style: none; }
-.tokenOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 15px; border-radius: 17px; text-align: left; cursor: pointer; }
-.tokenOption:hover, .tokenOption[aria-pressed="true"] { background: #303f52; }
-.tokenOption:focus-visible { outline-offset: -2px; }
-.tokenOption > .tokenMark { width: 36px; height: 36px; font-size: 25px; font-weight: 400; }
-.tokenIdentity { display: flex; flex-direction: column; min-width: 0; gap: 2px; font-size: 14px; font-weight: 500; }
-.tokenOption[aria-pressed="true"] .tokenIdentity > span:first-child { color: var(--accent); }
-.tokenFullName { color: #8190a6; font-size: 12px; font-weight: 400; letter-spacing: .2px; }
-.tokenBalance { display: flex; flex-direction: column; gap: 2px; margin-left: auto; text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
-.tokenBalance > span:last-child { font-size: 12px; color: #8190a6; letter-spacing: .2px; }
-.noTokens { padding: 10px 24px 30px; text-align: center; color: #a2afc2; font-size: 14px; }
+.tokenListHeading { margin: 0 20px 10px; color: #94a3b8; font-size: 13px; }
+.tokenList { display: grid; gap: 8px; margin: 0; padding: 0 20px 20px; list-style: none; }
+.tokenOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 13px; border: 1px solid #3e4959; border-radius: 4px; background: #242b35; text-align: left; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.tokenOption:hover { background: #2b3441; border-color: #65778e; }
+.tokenOption[aria-pressed="true"] { border-color: var(--accent); }
+.tokenOption:focus-visible { outline-offset: 2px; }
+.tokenOption > .tokenMark { width: 34px; height: 34px; font-size: 24px; font-weight: 400; }
+.tokenIdentity { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 3px; font-size: 15px; font-weight: 400; }
+.tokenName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tokenFullName { color: #8c9bb0; font-family: monospace; font-size: 12px; font-weight: 400; white-space: nowrap; }
+.tokenAddress { color: #7d8da3; }
+.tokenBalance { display: flex; flex-shrink: 0; flex-direction: column; gap: 3px; margin-left: auto; text-align: right; font-family: monospace; font-size: 15px; font-variant-numeric: tabular-nums; }
+.tokenBalance > span:last-child { font-size: 12px; color: #94a3b8; }
+.noTokens { padding: 10px 20px 28px; text-align: center; color: #a2afc2; font-size: 14px; }
+@media (max-width: 380px) {
+  .tokenSearchArea { margin-inline: 12px; }
+  .tokenListHeading { margin-inline: 12px; }
+  .tokenList { padding-inline: 12px; }
+  .tokenOption { gap: 8px; padding-inline: 9px; }
+  .tokenIdentity { font-size: 14px; }
+  .tokenFullName { font-size: 11px; }
+  .tokenSearch { font-size: 16px; }
+}
 
 .customSlippageLabel { display: block; margin: 18px 0 8px; font-size: 12px; color: #c3c9d4; }
 .customSlippageField { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #3a3a46; border-radius: 8px; background: #24282e; }
@@ -112,3 +125,12 @@
 .saveButton:disabled { opacity: .45; cursor: not-allowed; }
 
 .submit:not(:disabled) { cursor: pointer; }
+
+.historyDialog { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; }
+
+.balanceRow button:not(:disabled), .routeFooter button:not(:disabled) { cursor: pointer; }
+.routeChoices { display: grid; gap: 8px; margin-top: 12px; }
+.routeChoices button { display: flex; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid #3e4959; border-radius: 5px; cursor: pointer; font-size: 11px; }
+.routeChoices button[aria-pressed="true"] { border-color: var(--accent); }
+.tokenBalance { max-width: 35%; overflow-wrap: anywhere; }
+.balanceRow { gap: 10px; overflow-wrap: anywhere; }

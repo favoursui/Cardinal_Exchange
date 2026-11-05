@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { TradingSettingsProvider } from "@/features/trading/settings";
 import { WalletProvider } from "@/features/wallet/wallet-provider";
 
 export const metadata: Metadata = {
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="en"><body><WalletProvider>{children}</WalletProvider></body></html>;
+  return <html lang="en"><body><WalletProvider><TradingSettingsProvider>{children}</TradingSettingsProvider></WalletProvider></body></html>;
 }

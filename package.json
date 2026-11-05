@@ -9,12 +9,16 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "tunnel": "ngrok http 3000",
-    "test:wallet": "node --test scripts/wallet.test.mjs"
+    "test:wallet": "node --test scripts/wallet.test.mjs",
+    "test:history": "node --test scripts/history.test.mjs",
+    "test:trading": "node --test scripts/trading.test.mjs",
+    "test:trading-fork": "node scripts/test-trading-fork.mjs"
   },
   "dependencies": {
     "next": "16.4.4",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "viem": "2.57.13"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

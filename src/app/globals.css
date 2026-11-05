@@ -80,3 +80,5 @@ html:has(dialog[open]) { overflow: hidden; }
 
 .account-identicon { display: inline-flex; width: 24px; height: 24px; flex-shrink: 0; overflow: hidden; border-radius: 50%; }
 .account-identicon svg { display: block; width: 100%; height: 100%; }
+
+.settings-button:not(:disabled) { cursor: pointer; }

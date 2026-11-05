@@ -1,7 +1,9 @@
 "use client";
 
+import { useTradingSettings } from "@/features/trading/settings";
 import { useWallet, shortAddress } from "@/features/wallet/wallet-provider";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AccountIdenticon } from "@/components/ui/account-identicon";
 import { TokenLogo } from "@/components/ui/token-logo";
@@ -22,6 +24,8 @@ function CardinalMark() {
 
 export function Navbar() {
   const wallet = useWallet();
+  const settings = useTradingSettings();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigation = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -56,8 +60,8 @@ export function Navbar() {
           <details className="trade-menu">
             <summary className="trade-trigger">Trade <Chevron /></summary>
             <div className="trade-options">
-              <Link href="/" aria-current="page" onClick={() => setMenuOpen(false)}>Swap <span aria-hidden="true">↗</span></Link>
-              <button disabled>Liquidity <span className="soon-label">Soon</span></button>
+              <Link href="/" aria-current={pathname === "/" ? "page" : undefined} onClick={() => setMenuOpen(false)}>Swap <span aria-hidden="true">↗</span></Link>
+              <Link href="/liquidity" aria-current={pathname === "/liquidity" ? "page" : undefined} onClick={() => setMenuOpen(false)}>Liquidity <span aria-hidden="true">↗</span></Link>
             </div>
           </details>
           <button className="nav-link" disabled title="Coming soon">Cardinal AI</button>
@@ -68,7 +72,7 @@ export function Navbar() {
           <span className="network-pill" title="QMS testnet">
             <TokenLogo symbol="QMS" className="network-mark" />
           </span>
-          <button className="settings-button" disabled aria-label="Settings (coming soon)" title="Coming soon">
+          <button type="button" className="settings-button" onClick={settings.open} aria-label="Trading settings" aria-haspopup="dialog" title="Trading settings">
             <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="m9.5 3-.6 2.3-1.8 1-2.3-.6-2 3.5 1.7 1.7v2.2l-1.7 1.7 2 3.5 2.3-.6 1.8 1 .6 2.3h4.9l.6-2.3 1.8-1 2.3.6 2-3.5-1.7-1.7v-2.2l1.7-1.7-2-3.5-2.3.6-1.8-1-.6-2.3Z" />
               <circle cx="12" cy="12" r="3.2" />

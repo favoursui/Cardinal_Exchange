@@ -2,11 +2,13 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { isProvider, QMS_CHAIN_ID, WalletController, type WalletOption, type WalletState } from './controller';
+import { saveTransaction } from '@/features/history/store';
+import type { WalletTransaction } from './controller';
 import { WalletLogo, walletIconSource } from './wallet-logo';
 import { qmsWalletChain } from './network';
 import styles from './wallet.module.css';
 
-type WalletContextValue = WalletState & { correctNetwork: boolean; open: () => void; disconnect: () => void };
+type WalletContextValue = WalletState & { correctNetwork: boolean; open: () => void; disconnect: () => void; verifyTransaction: (hash: string) => Promise<void>; readRpc: WalletController["readRpc"]; sendTransaction: (tx: WalletTransaction) => Promise<{hash: string; historySaved: boolean}> };
 const WalletContext = createContext<WalletContextValue | null>(null);
 export function shortAddress(address: string) { return `${address.slice(0, 6)}…${address.slice(-4)}`; }
 export function useWallet() {
@@ -62,8 +64,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try { setConfigError(null); void controller.switchNetwork(qmsWalletChain()); }
     catch { setConfigError('The QMS network configuration is unavailable. Please try again later.'); }
   };
+  const sendTransaction = async (tx: WalletTransaction) => {
+    const hash = await controller.sendTransaction(tx);
+    let historySaved = true;
+    try { saveTransaction(localStorage, tx.from, hash); window.dispatchEvent(new Event('cardinal:transaction')); }
+    catch { historySaved = false; }
+    return {hash, historySaved};
+  };
   const correctNetwork = state.chainId === QMS_CHAIN_ID;
-  return <WalletContext.Provider value={{ ...state, correctNetwork, open, disconnect: controller.disconnect }}>
+  return <WalletContext.Provider value={{ ...state, correctNetwork, open, disconnect: controller.disconnect, verifyTransaction: controller.verifyTransaction, readRpc: controller.readRpc, sendTransaction }}>
     {children}
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="wallet-title" onClose={() => trigger.current?.focus()} onClick={event => {
       if (event.target !== event.currentTarget) return;

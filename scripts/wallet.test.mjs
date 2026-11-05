@@ -98,3 +98,22 @@ test('invalid wallet account and chain data fail closed', async () => {
     assert.equal(c.getSnapshot().account,null); assert.equal(c.getSnapshot().busy,false); assert.ok(c.getSnapshot().error);
   }
 });
+
+test('history import verifies transaction hash, sender, and chain without signing', async () => {
+ const c=new WalletController(), p=new Provider(), hash='0x'+'ab'.repeat(32);
+ p.handlers.eth_getTransactionByHash=()=>({hash,from:address});
+ await c.connect(option(p)); await c.verifyTransaction(hash);
+ p.handlers.eth_getTransactionByHash=()=>({hash,from:other});
+ await assert.rejects(c.verifyTransaction(hash),/not sent/);
+ p.handlers.eth_getTransactionByHash=()=>null;
+ await assert.rejects(c.verifyTransaction(hash),/not found/);
+ p.chainId='0x1'; await assert.rejects(c.verifyTransaction(hash),/Switch/);
+ assert.equal(p.calls.some(call=>/sign|sendTransaction/.test(call.method)),false);
+});
+test('history import rejects account changes during lookup', async () => {
+ const c=new WalletController(), p=new Provider(), hash='0x'+'ab'.repeat(32); let finish;
+ p.handlers.eth_getTransactionByHash=()=>new Promise(resolve=>{finish=resolve;});
+ await c.connect(option(p)); const work=c.verifyTransaction(hash); await tick();
+ p.emit('accountsChanged',[other]); finish({hash,from:address});
+ await assert.rejects(work,/changed/);
+});
