@@ -11,10 +11,10 @@
 .list button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border-radius: 12px; text-align: left; cursor: pointer; }
 .list button:hover { background: #303f52; }
 .list button span:nth-child(2) { flex: 1; overflow-wrap: anywhere; min-width: 0; }
-.icon { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; overflow: hidden; border-radius: 8px; color: #7bb7ff; font-size: 25px; }
+.icon { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; overflow: hidden; border-radius: 8px; color: var(--accent); font-size: 25px; }
 .icon img { width: 100%; height: 100%; object-fit: contain; }
 .primary, .secondary { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; cursor: pointer; }
-.primary { background: #2b6cf2; color: white; }
+.primary { background: var(--accent); color: white; }
 .secondary { border: 1px solid #41516b; color: #d4e6ff; }
 .dialog button:disabled { opacity: .6; cursor: wait; }
 .body .error { color: #ffabab; margin-top: 16px; }

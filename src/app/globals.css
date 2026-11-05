@@ -4,7 +4,7 @@
   color-scheme: dark;
   --background: #0c0d0f;
   --foreground: #f6f7f9;
-  --accent: #7bb7ff;
+  --accent: #2b6cf2;
 }
 
 @theme inline {
@@ -24,7 +24,8 @@ a { text-decoration: none; }
 .brand-name { font-family: Georgia, "Times New Roman", serif; font-size: 27px; font-weight: 700; font-variant: small-caps; letter-spacing: -.7px; }
 .nav-links { display: flex; align-items: center; gap: 24px; }
 .trade-menu { position: relative; }
-.trade-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 17px; background: #253545; color: var(--accent); border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
+.trade-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 12px; background: transparent; color: #7f94af; border-bottom: 2px solid transparent; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
+.trade-menu:has([aria-current="page"]) > .trade-trigger, .nav-link[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
 .trade-trigger::-webkit-details-marker { display: none; }
 .trade-menu[open] .trade-trigger svg { transform: rotate(180deg); }
 .trade-options { position: absolute; top: calc(100% + 13px); left: 0; z-index: 20; width: 200px; padding: 6px; background: #191c22; border: 1px solid #303640; border-radius: 14px; box-shadow: 0 12px 32px #0006; }
@@ -32,7 +33,7 @@ a { text-decoration: none; }
 .trade-options a:hover { background: #253545; color: var(--accent); }
 .trade-options button:disabled { color: #8894a6; cursor: not-allowed; }
 .soon-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; }
-.nav-link { color: #7f94af; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.nav-link { min-height: 36px; padding: 0 12px; background: transparent; border-bottom: 2px solid transparent; color: #7f94af; font-size: 14px; font-weight: 600; white-space: nowrap; }
 .nav-link:disabled, .settings-button:disabled, .wallet-button:disabled { cursor: not-allowed; }
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; }
 .network-pill { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 15px; border-radius: 999px; background: #23262e; color: #edf1f7; font-size: 14px; font-weight: 600; white-space: nowrap; }
@@ -48,7 +49,7 @@ a { text-decoration: none; }
   .settings-button, .settings-button > svg { transition: none; }
   .settings-button:hover, .settings-button:hover > svg { transform: none; }
 }
-.wallet-button { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 17px; border-radius: 999px; background: var(--accent); color: #10151d; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.wallet-button { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 17px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; white-space: nowrap; }
 .mobile-menu-button { display: none; }
 @media (max-width: 800px) {
   .exchange-nav { padding: 16px; gap: 16px; }
@@ -56,7 +57,7 @@ a { text-decoration: none; }
   .mobile-menu-button { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 9px; background: #23262e; color: #d1def0; cursor: pointer; }
   .nav-links { display: none; position: absolute; top: calc(100% + 1px); left: 12px; right: 12px; z-index: 30; padding: 12px; flex-direction: column; align-items: stretch; gap: 8px; background: #191c22; border: 1px solid #303640; border-radius: 14px; box-shadow: 0 12px 32px #0006; }
   .nav-links[data-open="true"] { display: flex; }
-  .nav-links .trade-trigger { justify-content: space-between; min-height: 44px; border-radius: 9px; }
+  .nav-links .trade-trigger { justify-content: space-between; min-height: 44px; border-radius: 0; }
   .nav-links .trade-options { position: static; width: 100%; margin-top: 6px; box-shadow: none; }
   .nav-links > .nav-link { min-height: 44px; padding: 12px 17px; text-align: left; }
   .nav-actions { gap: 12px; }

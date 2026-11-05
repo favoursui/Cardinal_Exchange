@@ -33,17 +33,17 @@
 .amountRow > input::placeholder { color: #f3f3f5; opacity: 1; }
 .amountRow > input:focus-visible { outline-offset: 3px; border-radius: 3px; }
 .tokenPicker { display: flex; align-items: center; flex-shrink: 0; gap: 6px; padding: 5px 0; color: #f6f6f8; font-size: 13px; font-weight: 500; border-radius: 5px; cursor: pointer; }
-.tokenPicker:hover { color: #7bb7ff; }
+.tokenPicker:hover { color: var(--accent); }
 .tokenMark { display: inline-grid; place-items: center; flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; font-size: 13px; font-weight: 600; color: #fff; }
 .balanceRow { display: flex; justify-content: space-between; color: #aaaab6; font-size: 11px; line-height: 18px; }
-.balanceRow button { font-size: 10px; color: #3db8ef; margin-left: 5px; padding: 0 3px; background: #1c303d; border-radius: 2px; cursor: not-allowed; }
+.balanceRow button { font-size: 10px; color: var(--accent); margin-left: 5px; padding: 0 3px; background: #1c303d; border-radius: 2px; cursor: not-allowed; }
 .switchDivider { position: relative; height: 5px; }
 .switchButton { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 31px; height: 31px; background: #1c1c22; border: 4px solid #16161a; border-radius: 9px; color: #fff; cursor: pointer; z-index: 1; }
 .switchButton:hover { background: #30303b; }
 .recipient { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-height: 43px; padding: 0 12px; border: 1px solid #2c2c33; border-top: none; border-radius: 0 0 8px 8px; color: #9393a2; font-size: 10px; }
 .recipient svg { width: 14px; height: 14px; }
 .gasRow { display: flex; align-items: center; gap: 10px; background: #1e1e23; margin-top: 13px; padding: 12px; border-radius: 7px; }
-.gasIcon { color: #30b9ef; align-self: flex-start; margin-top: 1px; }
+.gasIcon { color: var(--accent); align-self: flex-start; margin-top: 1px; }
 .gasRow p { color: #a2a2af; margin-top: 3px; font-size: 10px; }
 .gasValue { margin-left: auto; color: #a4a4b1; }
 .routeSection { margin-top: 21px; }
@@ -61,9 +61,9 @@
 .routeVenue > span { color: #8fd8ca; font-size: 15px; line-height: 16px; }
 .arrow { flex: 1; text-align: center; color: #9baabc; }
 .routeFooter { display: flex; justify-content: space-between; margin-top: 9px; font-size: 10px; color: #9b9bab; }
-.routeFooter button { color: #45bdf1; cursor: not-allowed; }
+.routeFooter button { color: var(--accent); cursor: not-allowed; }
 .routeFooter button span { margin-left: 4px; font-size: 15px; }
-.submit, .saveButton { display: block; width: 100%; background: #2b6cf2; color: #fff; border-radius: 6px; padding: 13px; font-size: 12px; font-weight: 500; margin-top: 20px; }
+.submit, .saveButton { display: block; width: 100%; background: var(--accent); color: #fff; border-radius: 6px; padding: 13px; font-size: 12px; font-weight: 500; margin-top: 20px; }
 .submit:disabled { cursor: not-allowed; }
 .notice { text-align: center; margin-top: 10px; color: #8f8f9d; font-size: 10px; }
 .settingsDialog { margin: auto; padding: 22px; border-radius: 14px; border: 1px solid #393943; background: #1b1b22; color: #eeeef5; width: min(360px, calc(100vw - 32px)); }
@@ -73,11 +73,11 @@
 .settingsDialog p { margin: 8px 0 16px; color: #aaaabb; font-size: 12px; line-height: 1.6; }
 .slippageOptions { display: flex; gap: 8px; }
 .slippageOptions button { flex: 1; border: 1px solid #3a3a46; border-radius: 8px; padding: 10px; cursor: pointer; }
-.slippageOptions button[aria-pressed="true"] { border-color: #7bb7ff; color: #7bb7ff; background: #22324c; }
+.slippageOptions button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: #22324c; }
 .saveButton { cursor: pointer; }
 @media (max-width: 380px) { .card { padding: 12px; } .routePath { gap: 3px; } .routeToken, .routeVenue { padding: 4px; font-size: 9px; } }
 
-.bestReturnTag { position: absolute; top: -13px; left: -1px; display: inline-flex; align-items: center; min-height: 20px; padding: 2px 5px; border: 1px solid #6698ff; border-radius: 4px; background: #2b6cf2; color: #fff; font-size: 10px; font-weight: 500; line-height: 14px; white-space: nowrap; }
+.bestReturnTag { position: absolute; top: -13px; left: -1px; display: inline-flex; align-items: center; min-height: 20px; padding: 2px 5px; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 500; line-height: 14px; white-space: nowrap; }
 
 .tokenDialog { margin: auto; padding: 0; width: min(448px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #2a3038; border-radius: 17px; background: #1c2025; color: #f0f1f4; box-shadow: 0 22px 80px #0006; }
 .tokenDialog::backdrop { background: #000b; backdrop-filter: blur(5px); }
@@ -88,14 +88,14 @@
 .tokenSearchArea { padding: 23px 23px 20px; }
 .tokenSearch { display: block; width: 100%; min-width: 0; height: 55px; padding: 0 16px; border: 1px solid #2d323b; border-radius: 20px; background: #24282e; color: #e9edf4; font-size: 16px; letter-spacing: .2px; }
 .tokenSearch::placeholder { color: #77869c; opacity: 1; }
-.tokenSearch:focus-visible { outline: 1px solid #597ba7; outline-offset: 0; }
+.tokenSearch:focus-visible { outline: 1px solid var(--accent); outline-offset: 0; }
 .tokenList { margin: 0; padding: 0 8px 8px; list-style: none; }
 .tokenOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 15px; border-radius: 17px; text-align: left; cursor: pointer; }
 .tokenOption:hover, .tokenOption[aria-pressed="true"] { background: #303f52; }
 .tokenOption:focus-visible { outline-offset: -2px; }
 .tokenOption > .tokenMark { width: 36px; height: 36px; font-size: 25px; font-weight: 400; }
 .tokenIdentity { display: flex; flex-direction: column; min-width: 0; gap: 2px; font-size: 14px; font-weight: 500; }
-.tokenOption[aria-pressed="true"] .tokenIdentity > span:first-child { color: #7bb7ff; }
+.tokenOption[aria-pressed="true"] .tokenIdentity > span:first-child { color: var(--accent); }
 .tokenFullName { color: #8190a6; font-size: 12px; font-weight: 400; letter-spacing: .2px; }
 .tokenBalance { display: flex; flex-direction: column; gap: 2px; margin-left: auto; text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
 .tokenBalance > span:last-child { font-size: 12px; color: #8190a6; letter-spacing: .2px; }
@@ -103,7 +103,7 @@
 
 .customSlippageLabel { display: block; margin: 18px 0 8px; font-size: 12px; color: #c3c9d4; }
 .customSlippageField { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #3a3a46; border-radius: 8px; background: #24282e; }
-.customSlippageField:focus-within { border-color: #7bb7ff; }
+.customSlippageField:focus-within { border-color: var(--accent); }
 .customSlippageField input { width: 100%; min-width: 0; padding: 12px 0; background: transparent; color: #f6f7f9; font-size: 16px; }
 .customSlippageField input:focus-visible { outline: none; }
 .customSlippageField > span { color: #9eacc0; }
