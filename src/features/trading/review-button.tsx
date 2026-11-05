@@ -26,8 +26,12 @@ async function verifyContracts(intent:Intent,read:ReturnType<typeof useWallet>['
  }
 }
 
-export function ReviewButton({intent,enabled,label,onComplete}:{intent:Intent|null;enabled:boolean;label:string;onComplete:()=>void}) {
+export function ReviewButton({intent,enabled,label,onComplete,inline=false,onPrepared}:{intent:Intent|null;enabled:boolean;label:string;onComplete:()=>void;inline?:boolean;onPrepared?:(review:Review,intent:Intent)=>void}) {
  const wallet=useWallet();const dialog=useRef<HTMLDialogElement>(null);const trigger=useRef<HTMLButtonElement>(null);
+ const [reviewIntent,setReviewIntent]=useState('');
+ const [visible,setVisible]=useState(false);
+ const open=()=>{setVisible(true);if(!inline)dialog.current?.showModal();};
+ const close=()=>{setVisible(false);dialog.current?.close();trigger.current?.focus();};
  const [review,setReview]=useState<Review>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [result,setResult]=useState<{hash:string;historySaved:boolean}>();
  const [status,setStatus]=useState<TransactionStatus['status']>();
  const [statusError,setStatusError]=useState(false);
@@ -51,22 +55,24 @@ export function ReviewButton({intent,enabled,label,onComplete}:{intent:Intent|nu
  },[result]);
  const prepare=async()=>{
   if(!wallet.account||!wallet.correctNetwork){wallet.open();return;}
-  if(result && status!=='confirmed' && status!=='reverted'){dialog.current?.showModal();return;}
+  if(result && status!=='confirmed' && status!=='reverted'){open();return;}
   if(!intent||locked.current)return;
   locked.current=true;setBusy(true);setError('');setReview(undefined);setResult(undefined);setStatus(undefined);setStatusError(false);
+  setReviewIntent(JSON.stringify(intent));
   captured.current={intent,account:wallet.account};const current=captured.current;
-  dialog.current?.showModal(); request.current=new AbortController();
+  open(); request.current=new AbortController();
   try {
    await verifyContracts(current.intent,wallet.readRpc);
    const requestData=requestFor(current.intent,current.account);
    const data=await api(requestData.path,requestData.body,request.current.signal);
    const next=validatePreparation(data,current.intent,current.account);
-   if(alive.current){setReview(next);setNow(Date.now());}
+   if(alive.current){setReview(next);setNow(Date.now());onPrepared?.(next,current.intent);}
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Preparation failed.');}
   finally{locked.current=false;if(alive.current)setBusy(false);}
  };
  const confirm=async()=>{
   if(!review||locked.current||!captured.current)return;
+  if(JSON.stringify(intent)!==JSON.stringify(captured.current.intent)){setError('Trade changed. Prepare again.');return;}
   if(!same(wallet.account,captured.current.account)||!wallet.correctNetwork){setError('Wallet changed. Prepare again.');return;}
   locked.current=true;setBusy(true);setError('');
   try {const sent=await wallet.sendTransaction(review.transaction);if(alive.current){setResult(sent);onComplete();}}
@@ -75,24 +81,25 @@ export function ReviewButton({intent,enabled,label,onComplete}:{intent:Intent|nu
  };
  let explorer:string|undefined;try{explorer=qmsWalletChain().blockExplorerUrls[0].replace(/\/$/,'');}catch{}
  const expired=review && now>=review.transaction.expiresAt;
- return <>
-  <button ref={trigger} type="button" className={styles.primary} disabled={busy || (!result&&!!wallet.account&&wallet.correctNetwork&&(!enabled||!intent))} onClick={()=>void prepare()}>{wallet.busy?'Check your wallet':!wallet.account?'Connect wallet':!wallet.correctNetwork?'Switch to QMS Testnet':result&&status!=='confirmed'&&status!=='reverted'?'View pending transaction':label}</button>
-  <dialog ref={dialog} className={styles.dialog} aria-labelledby="transaction-review-title" onCancel={event=>{if(busy)event.preventDefault();}} onClose={()=>trigger.current?.focus()}>
-   <div className={styles.heading}><h2 id="transaction-review-title">{result?(status==='confirmed'?'Transaction confirmed':status==='reverted'?'Transaction reverted':'Transaction submitted'):review?.title??'Prepare transaction'}</h2><button type="button" disabled={busy} aria-label="Close transaction review" onClick={()=>dialog.current?.close()}>×</button></div>
+ const content=<>
+   <div className={styles.heading}><h2 id="transaction-review-title">{result?(status==='confirmed'?'Transaction confirmed':status==='reverted'?'Transaction reverted':'Transaction submitted'):review?.title??'Prepare transaction'}</h2><button type="button" disabled={busy} aria-label="Close transaction review" onClick={close}>×</button></div>
    {busy&&<p role="status">{review?'Check your wallet to confirm.':'Checking contracts and preparing transaction…'}</p>}
    {error&&<p role="alert" className={styles.error}>{error}</p>}
    {result?<>
     <p role="status">{statusError?'Status unavailable — check the explorer before continuing.':status?statusLabels[status]:'Checking confirmation…'}</p>
-    <p>{review?.approval?(status==='confirmed'?'Approval confirmed. Close this panel and prepare again to continue.':'Waiting for approval confirmation before the next step.'):'Your transaction is also saved in History.'}</p>
+    <p>{review?.approval?(status==='confirmed'?'Approval confirmed. Prepare again to continue.':'Waiting for approval confirmation before the next step.'):'Your transaction is also saved in History.'}</p>
     <p className={styles.hash}>{explorer?<a href={`${explorer}/tx/${result.hash}`} target="_blank" rel="noopener noreferrer">{result.hash} ↗</a>:result.hash}</p>
     {!result.historySaved&&<p role="alert">Browser history could not be saved. Keep the hash above.</p>}
-    <button type="button" className={styles.primary} onClick={()=>dialog.current?.close()}>Done</button>
+    <button type="button" className={styles.primary} onClick={close}>Done</button>
    </>:<>
     {review&&<><ul className={styles.reviewLines}>{review.lines.map(line=><li key={line}>{line}</li>)}</ul><p className={styles.hash}>Wallet: {review.transaction.from}</p><p className={styles.hint}>QMS Testnet · Review the amount and recipient in your wallet.</p>
     {expired?<p role="status">Review expired. Prepare again for current amounts.</p>:<p className={styles.hint}>Review valid for {Math.max(0,Math.ceil((review.transaction.expiresAt-now)/1000))} seconds.</p>}
-    <button type="button" className={styles.primary} disabled={busy||expired||!same(wallet.account,review.transaction.from)||!wallet.correctNetwork} onClick={()=>void confirm()}>{review.approval?'Confirm approval in wallet':'Confirm in wallet'}</button></>}
+    <button type="button" className={styles.primary} disabled={busy||expired||JSON.stringify(intent)!==reviewIntent||!same(wallet.account,review.transaction.from)||!wallet.correctNetwork} onClick={()=>void confirm()}>{review.approval?'Confirm approval in wallet':'Confirm in wallet'}</button></>}
     {(!review||expired||error)&&!busy&&<button type="button" className={styles.secondary} onClick={()=>void prepare()}>Prepare again</button>}
    </>}
-  </dialog>
+ </>;
+ return <>
+  <button ref={trigger} type="button" className={styles.primary} disabled={busy || (!result&&!!wallet.account&&wallet.correctNetwork&&(!enabled||!intent))} onClick={()=>void prepare()}>{wallet.busy?'Check your wallet':!wallet.account?'Connect wallet':!wallet.correctNetwork?'Switch to QMS Testnet':result&&status!=='confirmed'&&status!=='reverted'?'View pending transaction':label}</button>
+  {inline ? (visible && <div className={styles.inlineReview} aria-labelledby="transaction-review-title">{content}</div>) : <dialog ref={dialog} className={styles.dialog} aria-labelledby="transaction-review-title" onCancel={event=>{if(busy)event.preventDefault();}} onClose={()=>trigger.current?.focus()}>{content}</dialog>}
  </>;
 }

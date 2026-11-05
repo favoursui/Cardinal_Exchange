@@ -21,3 +21,7 @@
 .field input, .field select { width: 100%; min-width: 0; padding: 12px; border: 1px solid #445064; border-radius: 6px; background: #242b35; font-size: 16px; }
 .pool { border: 1px solid #344356; padding: 12px; border-radius: 6px; font-size: 12px; margin: 15px 0; overflow-wrap: anywhere; }
 .pool p { margin: 6px 0; }
+
+.inlineReview { margin-top: 16px; padding-top: 16px; border-top: 1px solid #344356; font-size: 12px; }
+.inlineReview p { margin: 10px 0; line-height: 1.5; }
+.inlineReview .heading h2 { font-size: 14px; }

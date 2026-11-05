@@ -134,3 +134,14 @@
 .routeChoices button[aria-pressed="true"] { border-color: var(--accent); }
 .tokenBalance { max-width: 35%; overflow-wrap: anywhere; }
 .balanceRow { gap: 10px; overflow-wrap: anywhere; }
+
+.venueLogo { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.routeDetails { display: flex; justify-content: space-between; gap: 10px; margin-top: 5px; color: #a5afbd; font-size: 10px; }
+.routeDetails span { overflow-wrap: anywhere; }
+.routeDetails span:last-child { flex-shrink: 0; }
+.routeTiming { color: #a5afbd; }
+.gasValue { max-width: 45%; text-align: right; overflow-wrap: anywhere; }
+
+.routeChoiceIdentity { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.routeChoiceBest { padding: 3px 5px; border-radius: 3px; background: var(--accent); color: white; font-size: 9px; white-space: nowrap; }
+.routeChoiceAmount { margin-left: auto; text-align: right; overflow-wrap: anywhere; min-width: 0; }

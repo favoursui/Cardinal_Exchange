@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useTradingSettings } from "@/features/trading/settings";
 import { useBalances, useCapabilities } from "@/features/trading/use-trading-data";
 import { ReviewButton } from "@/features/trading/review-button";
@@ -92,7 +93,8 @@ export function ExchangeCard() {
   const balanceState = useBalances(wallet.account);
   const capabilities = useCapabilities();
   const [maxError, setMaxError] = useState("");
-  const [routesOpen, setRoutesOpen] = useState(false);
+  const [gasBudget, setGasBudget] = useState<{key:string;amount:string;approval:boolean}>();
+  const [openRoutesKey, setOpenRoutesKey] = useState<string | null>(null);
   const [inputToken, setInputToken] = useState<Token>("QMS");
   const [outputToken, setOutputToken] = useState<Token>("USDC");
   const [amount, setAmount] = useState("");
@@ -105,12 +107,16 @@ export function ExchangeCard() {
   const conversionAmount = /^\d+(?:\.\d{1,18})?$/.test(amount) ? amount : "0.00";
 
   const route = useRouteQuote(inputToken, outputToken, amount, slippage, !!conversion);
+  const routesKey = JSON.stringify([wallet.account, wallet.chainId, route.quotes.map(quote => quote.quoteId)]);
+  const routesOpen = route.quotes.length > 0 && openRoutesKey === routesKey;
   const routeName = route.quote?.venueName ?? "Awaiting quote";
   const estimatedOutput = route.quote ? displayUnits(route.quote.amountOut, tokenMetadata[outputToken].decimals) : "0.00";
 
   const inputBalance = balanceState.balances[inputToken], outputBalance = balanceState.balances[outputToken];
   const amountIn = baseUnits(amount, tokenMetadata[inputToken].decimals);
   const intent: Intent | null = conversion && amountIn ? {kind: conversion === "Wrap" ? "wrap" : "unwrap", amount: amountIn} : route.quote ? {kind: "swap", quote: route.quote} : null;
+  const feeKey = JSON.stringify([wallet.account, wallet.chainId, intent]);
+  const currentGas = gasBudget?.key === feeKey ? gasBudget : undefined;
   const complete = () => { balanceState.refresh(); route.refresh(); };
   const maxContext = useRef("");
   useEffect(() => { maxContext.current = `${wallet.account}:${inputToken}`; }, [wallet.account, inputToken]);
@@ -179,7 +185,7 @@ export function ExchangeCard() {
       <div className={styles.gasRow}>
         <span className={styles.gasIcon}><Icon name="gas" /></span>
         <div><span>Network fee</span><p>{inputToken === "QMS" ? "Keep some QMS available for gas" : "Paid in native QMS"}</p></div>
-        <span className={styles.gasValue}>—</span>
+        <span className={styles.gasValue}>{currentGas ? `${currentGas.amount} QMS` : "On preparation"}</span>
       </div>
 
       {conversion ? <div className={styles.routeSection}>
@@ -193,24 +199,26 @@ export function ExchangeCard() {
         <div className={styles.routeCard}>
           {route.quote && route.best && <span className={styles.bestReturnTag}>Best Return</span>}
           <div className={styles.routeSummary}><strong>{route.quote ? routeName : "Find your best route"}</strong><span>{route.quote ? estimatedOutput : "—"} {outputToken}</span></div>
-          <p>Compare available exchanges before you swap.</p>
+          <div className={styles.routeDetails}><span>{currentGas ? `${currentGas.approval ? "Approval gas budget" : "Gas budget"}: ${currentGas.amount} QMS` : "Gas: calculated on preparation"}</span><span>After swap fees</span></div>
+          <p className={styles.routeTiming}>Confirmation: 3 blocks · time varies</p>
+          {route.quote && <p>Minimum receive: {displayUnits(route.quote.minimumAmountOut, tokenMetadata[outputToken].decimals)} {outputToken} · Gas paid separately</p>}
           <div className={styles.routePath} aria-label={`${inputToken} through ${routeName} to ${outputToken}`}>
             <span className={styles.routeToken}><TokenMark token={inputToken} />{inputToken}</span>
             <span aria-hidden="true" className={styles.arrow}>⟶</span>
-            <span className={styles.routeVenue}>{routeName}</span>
+            <span className={styles.routeVenue}>{route.quote?.venue === "qwap" && <Image src="/images/qwap.jpg" alt="" width={18} height={18} className={styles.venueLogo} />}{routeName}</span>
             <span aria-hidden="true" className={styles.arrow}>⟶</span>
             <span className={styles.routeToken}><TokenMark token={outputToken} />{outputToken}</span>
           </div>
         </div>
-        <div className={styles.routeFooter}><span>Slippage: {slippage}%</span><button disabled={!route.quotes.length} type="button" onClick={() => setRoutesOpen(open => !open)}>{routesOpen ? "Hide routes" : "See all routes"} <span aria-hidden="true">›</span></button></div>
-        {routesOpen && <div className={styles.routeChoices}>{route.quotes.map(quote => <button key={quote.quoteId} type="button" aria-pressed={route.quote?.quoteId === quote.quoteId} onClick={() => route.select(quote.venue)}><span>{quote.venueName}</span><span>{displayUnits(quote.amountOut, tokenMetadata[outputToken].decimals)} {outputToken}</span></button>)}</div>}
+        <div className={styles.routeFooter}><span>Slippage: {slippage}%</span><button disabled={!route.quotes.length} type="button" aria-expanded={routesOpen} onClick={() => setOpenRoutesKey(routesOpen ? null : routesKey)}>{routesOpen ? "Hide routes" : "See all routes"} <span aria-hidden="true">›</span></button></div>
+        {routesOpen && <div className={styles.routeChoices}>{route.quotes.map((quote, index) => <button key={quote.quoteId} type="button" aria-pressed={route.quote?.quoteId === quote.quoteId} onClick={() => { route.select(quote.venue); setOpenRoutesKey(null); }}><span className={styles.routeChoiceIdentity}>{quote.venue === "qwap" && <Image src="/images/qwap.jpg" alt="" width={18} height={18} className={styles.venueLogo} />}<span>{quote.venueName}</span>{index === 0 && <span className={styles.routeChoiceBest}>Best Return</span>}</span><span className={styles.routeChoiceAmount}>{displayUnits(quote.amountOut, tokenMetadata[outputToken].decimals)} {outputToken}</span></button>)}</div>}
       </div>}
 
       {maxError && <p role="alert">{maxError}</p>}
       {capabilities.error && <p role="alert">{capabilities.error}</p>}
       {capabilities.ready && !capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation") && <p className={styles.notice}>Preparation is disabled on the API.</p>}
       {inputToken === "QMS" && <p className={styles.notice}>MAX reserves a conservative gas budget. Unused gas stays in your wallet.</p>}
-      <ReviewButton key={`${wallet.account}:${wallet.chainId}`} intent={intent} enabled={capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation")} label={conversion ? `Review ${conversion.toLowerCase()}` : "Review swap"} onComplete={complete} />
+      <ReviewButton inline onPrepared={(review, preparedIntent) => { const tx = review.transaction; setGasBudget(tx.gas && tx.gasPrice ? {key: JSON.stringify([wallet.account, wallet.chainId, preparedIntent]), amount: displayUnits((BigInt(tx.gas) * BigInt(tx.gasPrice)).toString(), 18), approval: review.approval} : undefined); }} key={`${wallet.account}:${wallet.chainId}`} intent={intent} enabled={capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation")} label={conversion ? `Review ${conversion.toLowerCase()}` : "Review swap"} onComplete={complete} />
 
       <dialog ref={history} className={`${styles.settingsDialog} ${styles.historyDialog}`} aria-labelledby="history-title" onClose={() => { setHistoryOpen(false); historyButton.current?.focus(); }} onClick={event => {
         if (event.target !== event.currentTarget) return;

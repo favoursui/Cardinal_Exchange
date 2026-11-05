@@ -17,17 +17,47 @@ export function useRouteQuote(input:Token,output:Token,amount:string,slippage:st
  const [revision,setRevision]=useState(0);const [venue,setVenue]=useState('');
  const amountIn=baseUnits(amount,tokenMetadata[input].decimals),slippageBps=Math.round(Number(slippage)*100);
  const key=JSON.stringify([input,output,amountIn,slippageBps,conversion,revision]);const enabled=!conversion&&amountIn!==null;
- useEffect(()=>{if(!enabled)return;const controller=new AbortController();let expiry:ReturnType<typeof setTimeout>;
- const timer=setTimeout(async()=>{try{
- const data=await api('/v1/quotes',{chainId:19480,tokenIn:tokenMetadata[input].address,tokenOut:tokenMetadata[output].address,amountIn,slippageBps},controller.signal);
- if(!Array.isArray(data.quotes))throw new Error('Invalid quotes.');
- const quotes=data.quotes.map(value=>parseQuote(value,input,output,amountIn!,slippageBps));if(!quotes.length)throw new Error('No available routes.');
- quotes.sort((a,b)=>BigInt(a.amountOut)>BigInt(b.amountOut)?-1:BigInt(a.amountOut)<BigInt(b.amountOut)?1:0);
- if(controller.signal.aborted)return;
- setResult({key,quotes,status:'Available routes · before gas'});
- expiry=setTimeout(()=>setResult({key,quotes:[],status:'Quote expired — refresh'}),Math.max(0,Math.min(...quotes.map(q=>Date.parse(q.expiresAt)))-Date.now()));
- }catch(e){if(!controller.signal.aborted)setResult({key,quotes:[],status:e instanceof Error?e.message:'Quote unavailable'});}},400);
- return()=>{controller.abort();clearTimeout(timer);clearTimeout(expiry);};},[key,enabled,input,output,amountIn,slippageBps]);
+ useEffect(()=>{
+  if(!enabled)return;
+  const controller=new AbortController();
+  let timer:ReturnType<typeof setTimeout>;
+  let inFlight=false;
+  let expiresAt=0;
+  const schedule=(delay:number)=>{clearTimeout(timer);timer=setTimeout(()=>void fetchQuotes(),delay);};
+  const fetchQuotes=async()=>{
+   if(controller.signal.aborted||inFlight||document.visibilityState==='hidden')return;
+   inFlight=true;
+   setResult({key,quotes:[],status:'Finding route…'});
+   try {
+    const data=await api('/v1/quotes',{chainId:19480,tokenIn:tokenMetadata[input].address,tokenOut:tokenMetadata[output].address,amountIn,slippageBps},controller.signal);
+    if(controller.signal.aborted)return;
+    if(!Array.isArray(data.quotes))throw new Error('Invalid quotes.');
+    const quotes=data.quotes.map(value=>parseQuote(value,input,output,amountIn!,slippageBps));
+    if(!quotes.length)throw new Error('No available routes.');
+    quotes.sort((a,b)=>BigInt(a.amountOut)>BigInt(b.amountOut)?-1:BigInt(a.amountOut)<BigInt(b.amountOut)?1:0);
+    expiresAt=Math.min(...quotes.map(q=>Date.parse(q.expiresAt)));
+    setResult({key,quotes,status:'Available routes · before gas'});
+    clearTimeout(timer);
+    timer=setTimeout(()=>{
+     expiresAt=0;
+     setResult({key,quotes:[],status:'Refreshing quote…'});
+     void fetchQuotes();
+    },Math.max(0,expiresAt-Date.now()));
+   } catch(e) {
+    if(!controller.signal.aborted){
+     expiresAt=0;
+     setResult({key,quotes:[],status:e instanceof Error?e.message:'Quote unavailable'});
+     schedule(15_000);
+    }
+   } finally {inFlight=false;}
+  };
+  const visibility=()=>{
+   if(document.visibilityState==='visible'&&expiresAt<=Date.now()&&!inFlight)schedule(0);
+  };
+  document.addEventListener('visibilitychange',visibility);
+  schedule(400);
+  return()=>{controller.abort();clearTimeout(timer);document.removeEventListener('visibilitychange',visibility);};
+ },[key,enabled,input,output,amountIn,slippageBps]);
  const current=enabled&&result?.key===key?result:undefined;const quotes=current?.quotes??[];
  const quote=quotes.find(q=>q.venue===venue)??quotes[0];
  return {quote,quotes,best:quote===quotes[0],select:setVenue,status:!enabled?'Awaiting quote':current?.status??'Finding route…',refresh:()=>setRevision(v=>v+1),enabled};
