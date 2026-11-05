@@ -76,3 +76,6 @@ a { text-decoration: none; }
 html:has(dialog[open]) { overflow: hidden; }
 
 .wallet-button { cursor: pointer; }
+
+.account-identicon { display: inline-flex; width: 24px; height: 24px; flex-shrink: 0; overflow: hidden; border-radius: 50%; }
+.account-identicon svg { display: block; width: 100%; height: 100%; }

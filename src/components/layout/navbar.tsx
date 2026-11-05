@@ -3,6 +3,7 @@
 import { useWallet, shortAddress } from "@/features/wallet/wallet-provider";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { AccountIdenticon } from "@/components/ui/account-identicon";
 import { TokenLogo } from "@/components/ui/token-logo";
 
 function Chevron() {
@@ -74,7 +75,7 @@ export function Navbar() {
             </svg>
           </button>
           <button type="button" className="wallet-button" onClick={() => { setMenuOpen(false); wallet.open(); }} aria-haspopup="dialog" title={wallet.account ?? "Connect wallet"}>
-            <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 8V5a2 2 0 0 0-2-2L5 6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h15V8H5a2 2 0 0 1 0-4" /><path d="M20 12h-5v5h5" /><path d="M17 14.5h.01" /></svg>
+            {wallet.account ? <AccountIdenticon address={wallet.account} /> : (<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 8V5a2 2 0 0 0-2-2L5 6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h15V8H5a2 2 0 0 1 0-4" /><path d="M20 12h-5v5h5" /><path d="M17 14.5h.01" /></svg>)}
             <span>{wallet.busy ? "Connecting…" : wallet.account ? shortAddress(wallet.account) : "Connect wallet"}</span>
             <Chevron />
           </button>
