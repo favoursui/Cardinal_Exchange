@@ -75,13 +75,15 @@ function TokenPicker({ token, label, onChange }: { token: Token; label: string; 
 }
 
 export function ExchangeCard() {
-  const [inputToken, setInputToken] = useState<Token>("WQMS");
+  const [inputToken, setInputToken] = useState<Token>("QMS");
   const [outputToken, setOutputToken] = useState<Token>("USDC");
   const [amount, setAmount] = useState("");
   const [slippage, setSlippage] = useState("0.5");
   const [draftSlippage, setDraftSlippage] = useState("0.5");
   const validSlippage = /^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(draftSlippage) && Number(draftSlippage) >= 0 && Number(draftSlippage) <= 5;
   const settings = useRef<HTMLDialogElement>(null);
+  const conversion = inputToken === "QMS" && outputToken === "WQMS" ? "Wrap" : inputToken === "WQMS" && outputToken === "QMS" ? "Unwrap" : null;
+  const conversionAmount = /^\d+(?:\.\d{1,18})?$/.test(amount) ? amount : "0.00";
 
   function chooseToken(side: "input" | "output", token: Token) {
     if (side === "input") {
@@ -97,16 +99,16 @@ export function ExchangeCard() {
   return (
     <section className={styles.card} aria-labelledby="exchange-title">
       <div className={styles.heading}>
-        <h1 id="exchange-title">Exchange</h1>
+        <h1 id="exchange-title">{conversion ?? "Exchange"}</h1>
         <div className={styles.tools}>
           <button type="button" className={styles.iconButton} disabled aria-label="Refresh quote" title="No quote to refresh"><Icon name="refresh" /></button>
-          <button type="button" className={styles.iconButton} onClick={() => { setDraftSlippage(slippage); settings.current?.showModal(); }} aria-label="Swap settings"><Icon name="settings" /></button>
+          <button type="button" className={styles.iconButton} disabled={!!conversion} onClick={() => { setDraftSlippage(slippage); settings.current?.showModal(); }} aria-label="Swap settings"><Icon name="settings" /></button>
         </div>
       </div>
 
       <div className={styles.amountGroup}>
         <div className={styles.amountPanel}>
-          <div className={styles.networkRow}><label htmlFor="swap-amount">From</label><TokenLogo symbol="QMS" className={styles.chainMark} /><span>QMS</span><span className={styles.testnet}>Testnet</span></div>
+          <div className={styles.networkRow}><label htmlFor="swap-amount">From</label></div>
           <div className={styles.amountRow}>
             <input id="swap-amount" aria-label={`Amount of ${inputToken} to swap`} value={amount} placeholder="0.00" inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={79} onChange={event => { if (/^\d*(\.\d*)?$/.test(event.target.value)) setAmount(event.target.value); }} />
             <TokenPicker token={inputToken} label="From token" onChange={token => chooseToken("input", token)} />
@@ -119,9 +121,9 @@ export function ExchangeCard() {
         </div>
 
         <div className={styles.amountPanel}>
-          <div className={styles.networkRow}><span>To</span><TokenLogo symbol="QMS" className={styles.chainMark} /><span>QMS</span><span className={styles.testnet}>Testnet</span></div>
+          <div className={styles.networkRow}><span>To</span></div>
           <div className={styles.amountRow}>
-            <output aria-label="Estimated output amount" className={styles.output}>0.00</output>
+            <output aria-label="Estimated output amount" className={styles.output}>{conversion ? conversionAmount : "0.00"}</output>
             <TokenPicker token={outputToken} label="To token" onChange={token => chooseToken("output", token)} />
           </div>
           <div className={styles.balanceRow}><span>— USD</span><span>Balance: —</span></div>
@@ -131,11 +133,17 @@ export function ExchangeCard() {
 
       <div className={styles.gasRow}>
         <span className={styles.gasIcon}><Icon name="gas" /></span>
-        <div><span>Network fee</span><p>Paid in QMS</p></div>
+        <div><span>Network fee</span><p>{inputToken === "QMS" ? "Keep some QMS available for gas" : "Paid in native QMS"}</p></div>
         <span className={styles.gasValue}>—</span>
       </div>
 
-      <div className={styles.routeSection}>
+      {conversion ? <div className={styles.routeSection}>
+        <div className={styles.routeCard}>
+          <div className={styles.routeSummary}><strong>{conversion} {inputToken}</strong><span>1 QMS = 1 WQMS</span></div>
+          <p>{conversion === "Wrap" ? "Convert QMS into wrapped QMS for token swaps." : "Convert wrapped QMS back to native QMS."}</p>
+          <p>No swap fee or slippage. Network gas still applies.</p>
+        </div>
+      </div> : <div className={styles.routeSection}>
         <div className={styles.routeHeading}><span>Swap route</span><span className={styles.routeStatus}>Awaiting quote</span></div>
         <div className={styles.routeCard}>
           <span className={styles.bestReturnTag}>Best Return</span>
@@ -144,16 +152,15 @@ export function ExchangeCard() {
           <div className={styles.routePath} aria-label={`${inputToken} through an exchange to ${outputToken}`}>
             <span className={styles.routeToken}><TokenMark token={inputToken} />{inputToken}</span>
             <span aria-hidden="true" className={styles.arrow}>⟶</span>
-            <span className={styles.routeVenue}><span aria-hidden="true">↔</span> Exchange</span>
+            <span className={styles.routeVenue}>Exchange</span>
             <span aria-hidden="true" className={styles.arrow}>⟶</span>
             <span className={styles.routeToken}><TokenMark token={outputToken} />{outputToken}</span>
           </div>
         </div>
         <div className={styles.routeFooter}><span>Slippage: {slippage}%</span><button disabled type="button">See all routes <span aria-hidden="true">›</span></button></div>
-      </div>
+      </div>}
 
       <button type="button" disabled className={styles.submit} title="Wallet connection coming soon">Connect wallet</button>
-      <p className={styles.notice}>QMS testnet · No real funds</p>
 
       <dialog ref={settings} className={styles.settingsDialog} aria-labelledby="settings-title" onClick={event => { if (event.target === event.currentTarget) settings.current?.close(); }}>
         <div className={styles.heading}><h2 id="settings-title">Swap settings</h2><button className={styles.closeButton} type="button" aria-label="Close settings" onClick={() => settings.current?.close()}>×</button></div>

@@ -10,8 +10,6 @@
 .amountPanel:first-child { border-radius: 8px 8px 0 0; }
 .networkRow { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .networkRow > :first-child { color: #b5b5c1; margin-right: 4px; }
-.chainMark { width: 18px; height: 18px; display: grid; place-items: center; font-size: 11px; font-weight: 700; border-radius: 50%; background: #749ee8; color: #111722; }
-.testnet { margin-left: auto; color: #92929f; font-size: 10px; letter-spacing: .2px; }
 .amountRow { display: flex; align-items: center; gap: 12px; margin: 12px 0 11px; }
 .amountRow > input, .output { display: block; width: 100%; min-width: 0; font-size: 22px; font-weight: 500; line-height: 1.25; letter-spacing: -.7px; font-variant-numeric: tabular-nums; background: transparent; }
 .amountRow > input::placeholder { color: #f3f3f5; opacity: 1; }

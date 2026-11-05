@@ -39,7 +39,6 @@ export function Navbar() {
         <div className="nav-actions">
           <span className="network-pill" title="QMS testnet">
             <TokenLogo symbol="QMS" className="network-mark" />
-            <span>QMS <span className="network-testnet">Testnet</span></span>
           </span>
           <button className="settings-button" disabled aria-label="Settings (coming soon)" title="Coming soon">
             <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
