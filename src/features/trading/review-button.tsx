@@ -26,7 +26,7 @@ async function verifyContracts(intent:Intent,read:ReturnType<typeof useWallet>['
  }
 }
 
-export function ReviewButton({intent,enabled,label,onComplete,inline=false,onPrepared}:{intent:Intent|null;enabled:boolean;label:string;onComplete:()=>void;inline?:boolean;onPrepared?:(review:Review,intent:Intent)=>void}) {
+function DetailedReviewButton({intent,enabled,label,onComplete,inline=false,onPrepared}:{intent:Intent|null;enabled:boolean;label:string;onComplete:()=>void;inline?:boolean;onPrepared?:(review:Review,intent:Intent)=>void}) {
  const wallet=useWallet();const dialog=useRef<HTMLDialogElement>(null);const trigger=useRef<HTMLButtonElement>(null);
  const [reviewIntent,setReviewIntent]=useState('');
  const [visible,setVisible]=useState(false);
@@ -101,5 +101,91 @@ export function ReviewButton({intent,enabled,label,onComplete,inline=false,onPre
  return <>
   <button ref={trigger} type="button" className={styles.primary} disabled={busy || (!result&&!!wallet.account&&wallet.correctNetwork&&(!enabled||!intent))} onClick={()=>void prepare()}>{wallet.busy?'Check your wallet':!wallet.account?'Connect wallet':!wallet.correctNetwork?'Switch to QMS Testnet':result&&status!=='confirmed'&&status!=='reverted'?'View pending transaction':label}</button>
   {inline ? (visible && <div className={styles.inlineReview} aria-labelledby="transaction-review-title">{content}</div>) : <dialog ref={dialog} className={styles.dialog} aria-labelledby="transaction-review-title" onCancel={event=>{if(busy)event.preventDefault();}} onClose={()=>trigger.current?.focus()}>{content}</dialog>}
+ </>;
+}
+
+type ActionProps = {intent:Intent|null;enabled:boolean;label:string;onComplete:()=>void;onSuccess?:(intent:Intent)=>void;inline?:boolean;onPrepared?:(review:Review,intent:Intent)=>void};
+
+export function ReviewButton(props:ActionProps) {
+ return props.inline ? <SwapAction {...props} /> : <DetailedReviewButton {...props} />;
+}
+
+function SwapAction({intent,enabled,onComplete,onPrepared,onSuccess}:ActionProps) {
+ const wallet=useWallet();
+ const key=JSON.stringify([wallet.account,wallet.chainId,intent]);
+ const intentJson=JSON.stringify(intent);
+ const callbacks=useRef({onComplete,onPrepared,onSuccess});
+ useEffect(()=>{callbacks.current={onComplete,onPrepared,onSuccess};},[onComplete,onPrepared,onSuccess]);
+ const [prepared,setPrepared]=useState<{key:string;review:Review}>();
+ const [failure,setFailure]=useState<{key:string;message:string}>();
+ const [revision,setRevision]=useState(0);
+ const [sending,setSending]=useState(false);
+ const lock=useRef(false);
+ const [result,setResult]=useState<{hash:string;historySaved:boolean;approval:boolean;intent:Intent}>();
+ const [status,setStatus]=useState<TransactionStatus['status']>();
+ const [statusError,setStatusError]=useState(false);
+ const pending=!!result&&status!=='confirmed'&&status!=='reverted';
+ const read=wallet.readRpc,account=wallet.account,correctNetwork=wallet.correctNetwork;
+ useEffect(()=>{
+  const current=JSON.parse(intentJson) as Intent|null;
+  if(!current||!enabled||!account||!correctNetwork||sending||pending)return;
+  const controller=new AbortController();let timer:ReturnType<typeof setTimeout>;
+  const prepare=async()=>{
+   try {
+    await verifyContracts(current,read);
+    if(controller.signal.aborted)return;
+    const request=requestFor(current,account);
+    const data=await api(request.path,request.body,controller.signal);
+    if(controller.signal.aborted)return;
+    const review=validatePreparation(data,current,account);
+    setPrepared({key,review});setFailure(undefined);
+    callbacks.current.onPrepared?.(review,current);
+    timer=setTimeout(()=>{setPrepared(undefined);setRevision(n=>n+1);},Math.max(0,review.transaction.expiresAt-Date.now()));
+   } catch(error) {
+    if(!controller.signal.aborted){setPrepared(undefined);setFailure({key,message:error instanceof Error?error.message:'Preparation unavailable.'});}
+   }
+  };
+  void prepare();return()=>{controller.abort();clearTimeout(timer);};
+ },[key,intentJson,enabled,account,correctNetwork,sending,pending,revision,read]);
+ useEffect(()=>{
+  if(!result)return;
+  const controller=new AbortController();let timer:ReturnType<typeof setTimeout>;
+  const poll=async()=>{
+   if(document.visibilityState==='hidden'){timer=setTimeout(poll,10_000);return;}
+   try {
+    const next=parseStatus(await api(`/v1/transactions/${result.hash}`,undefined,controller.signal),result.hash);
+    if(controller.signal.aborted)return;
+    setStatus(next.status);setStatusError(false);
+    if(next.status==='confirmed'||next.status==='reverted'){
+     if(next.status==='confirmed'&&!result.approval)callbacks.current.onSuccess?.(result.intent);
+     callbacks.current.onComplete();return;
+    }
+   } catch {if(controller.signal.aborted)return;setStatusError(true);}
+   timer=setTimeout(poll,10_000);
+  };
+  void poll();return()=>{controller.abort();clearTimeout(timer);};
+ },[result]);
+ const review=prepared?.key===key?prepared.review:undefined;
+ const error=failure?.key===key?failure.message:undefined;
+ const submit=async()=>{
+  if(!account||!correctNetwork){wallet.open();return;}
+  if(lock.current||pending||!intent)return;
+  if(!review||review.transaction.expiresAt<=Date.now()) {setPrepared(undefined);setFailure(undefined);setRevision(n=>n+1);return;}
+  lock.current=true;setSending(true);setFailure(undefined);setStatus(undefined);setStatusError(false);setResult(undefined);
+  // Capture the validated payload once. Quote refreshes never replace a wallet request.
+  const transaction=review.transaction;
+  try {const sent=await wallet.sendTransaction(transaction);setResult({...sent,approval:review.approval,intent});callbacks.current.onComplete();}
+  catch(error){setFailure({key,message:error instanceof Error?error.message:'Wallet request failed.'});}
+  finally{setPrepared(undefined);lock.current=false;setSending(false);}
+ };
+ let explorer:string|undefined;try{explorer=qmsWalletChain().blockExplorerUrls[0].replace(/\/$/,'');}catch{}
+ const token=intent?.kind==='swap'?intent.quote.tokenIn:'';
+ const action=review?.approval?`${review.title==='Reset token allowance'?'Reset':'Approve'} ${token}`:intent?.kind==='wrap'?'WRAP':intent?.kind==='unwrap'?'UNWRAP':'SWAP';
+ const label=sending?'CONFIRM IN WALLET…':!account?'Connect wallet':!correctNetwork?'Switch to QMS Testnet':pending?'CONFIRMING…':!intent?'Enter an amount':!enabled?'Swaps unavailable':review?action:error?'Retry':'PREPARING…';
+ return <>
+  <button type="button" className={styles.primary} disabled={sending||wallet.busy||pending||(!!account&&correctNetwork&&(!enabled||!intent||(!review&&!error)))} onClick={()=>void submit()}>{label}</button>
+  {error&&<p role="alert" className={styles.error}>{error}</p>}
+  {result&&<p role="status" className={styles.hint}>{statusError?'Status unavailable — check the explorer.':status?statusLabels[status]:'Transaction submitted.'} {explorer&&<a href={`${explorer}/tx/${result.hash}`} target="_blank" rel="noopener noreferrer">View transaction ↗</a>}</p>}
+  {result&&!result.historySaved&&<p role="alert" className={styles.hash}>History could not be saved. Keep this hash: {result.hash}</p>}
  </>;
 }

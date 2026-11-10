@@ -12,6 +12,14 @@ export function displayUnits(amount:string,decimals:number):string {
  if(decimals===0)return amount;
  const digits=amount.padStart(decimals+1,'0'),fraction=digits.slice(-decimals).replace(/0+$/,'');return `${digits.slice(0,-decimals)}${fraction?'.'+fraction:''}`;
 }
+// Display only: keep exact base units for transactions and MAX.
+export function displayBalance(amount:string,decimals:number):string {
+ const full=displayUnits(amount,decimals);
+ const [whole,fraction='']=full.split('.');
+ const short=fraction.slice(0,4).replace(/0+$/,'');
+ if(BigInt(amount)>BigInt(0)&&BigInt(whole)===BigInt(0)&&!short)return '<0.0001';
+ return `${whole}${short?'.'+short:''}`;
+}
 export function useRouteQuote(input:Token,output:Token,amount:string,slippage:string,conversion:boolean) {
  const [result,setResult]=useState<{key:string;quotes:TradingQuote[];status:string}>();
  const [revision,setRevision]=useState(0);const [venue,setVenue]=useState('');

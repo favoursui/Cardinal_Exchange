@@ -10,7 +10,7 @@ import { useWallet, shortAddress } from "@/features/wallet/wallet-provider";
 import { useEffect, useId, useRef, useState } from "react";
 import { TokenLogo } from "@/components/ui/token-logo";
 import { tokens, tokenMetadata, type Token } from "@/lib/config/tokens";
-import { baseUnits, displayUnits, useRouteQuote } from "./use-route-quote";
+import { baseUnits, displayUnits, displayBalance, useRouteQuote } from "./use-route-quote";
 import styles from "./exchange-card.module.css";
 
 type IconName = "history" | "settings" | "refresh" | "switch" | "gas" | "wallet";
@@ -77,7 +77,7 @@ function TokenPicker({ token, label, onChange, balances }: { token: Token; label
                   <span className={styles.tokenName}>{tokenMetadata[value].name}</span>
                   <span className={styles.tokenFullName}>{value}{value !== "QMS" && <span className={styles.tokenAddress} title={tokenMetadata[value].address}> · {shortAddress(tokenMetadata[value].address)}</span>}</span>
                 </span>
-                <span className={styles.tokenBalance} aria-label={balances[value] === undefined ? "Balance unavailable" : "Token balance"}><span>{balances[value] === undefined ? "—" : displayUnits(balances[value]!, tokenMetadata[value].decimals)}</span><span>—</span></span>
+                <span className={styles.tokenBalance} aria-label={balances[value] === undefined ? "Balance unavailable" : "Token balance"}><span>{balances[value] === undefined ? "—" : displayBalance(balances[value]!, tokenMetadata[value].decimals)}</span><span>—</span></span>
               </button>
             </li>
           ))}
@@ -117,6 +117,12 @@ export function ExchangeCard() {
   const intent: Intent | null = conversion && amountIn ? {kind: conversion === "Wrap" ? "wrap" : "unwrap", amount: amountIn} : route.quote ? {kind: "swap", quote: route.quote} : null;
   const feeKey = JSON.stringify([wallet.account, wallet.chainId, intent]);
   const currentGas = gasBudget?.key === feeKey ? gasBudget : undefined;
+  const resetAfterSuccess = (submitted: Intent) => {
+    const unchanged = submitted.kind === "swap"
+      ? submitted.quote.tokenIn === inputToken && submitted.quote.tokenOut === outputToken && submitted.quote.amountIn === amountIn
+      : (submitted.kind === "wrap" || submitted.kind === "unwrap") && conversion?.toLowerCase() === submitted.kind && submitted.amount === amountIn;
+    if (unchanged) { setAmount("0.00"); setGasBudget(undefined); setOpenRoutesKey(null); setMaxError(""); }
+  };
   const complete = () => { balanceState.refresh(); route.refresh(); };
   const maxContext = useRef("");
   useEffect(() => { maxContext.current = `${wallet.account}:${inputToken}`; }, [wallet.account, inputToken]);
@@ -164,7 +170,7 @@ export function ExchangeCard() {
             <input id="swap-amount" aria-label={`Amount of ${inputToken} to swap`} value={amount} placeholder="0.00" inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={79} onChange={event => { if (/^\d*(\.\d*)?$/.test(event.target.value)) setAmount(event.target.value); }} />
             <TokenPicker token={inputToken} label="From token" onChange={token => chooseToken("input", token)} balances={balanceState.balances} />
           </div>
-          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {inputBalance === undefined ? "—" : displayUnits(inputBalance, tokenMetadata[inputToken].decimals)} <button type="button" disabled={inputBalance === undefined || !wallet.correctNetwork} onClick={() => void fillMax()} title={inputToken === "QMS" ? "Reserve a conservative gas budget" : "Use token balance"}>MAX</button></span></div>
+          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {inputBalance === undefined ? "—" : displayBalance(inputBalance, tokenMetadata[inputToken].decimals)} <button type="button" disabled={inputBalance === undefined || !wallet.correctNetwork} onClick={() => void fillMax()} title={inputToken === "QMS" ? "Reserve a conservative gas budget" : "Use token balance"}>MAX</button></span></div>
         </div>
 
         <div className={styles.switchDivider}>
@@ -177,7 +183,7 @@ export function ExchangeCard() {
             <output aria-label="Estimated output amount" className={styles.output}>{conversion ? conversionAmount : estimatedOutput}</output>
             <TokenPicker token={outputToken} label="To token" onChange={token => chooseToken("output", token)} balances={balanceState.balances} />
           </div>
-          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {outputBalance === undefined ? "—" : displayUnits(outputBalance, tokenMetadata[outputToken].decimals)}</span></div>
+          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {outputBalance === undefined ? "—" : displayBalance(outputBalance, tokenMetadata[outputToken].decimals)}</span></div>
         </div>
         <div className={styles.recipient}><Icon name="wallet" /><span title={wallet.account ?? undefined}>{wallet.account ? shortAddress(wallet.account) : "No wallet connected"}</span></div>
       </div>
@@ -218,7 +224,7 @@ export function ExchangeCard() {
       {capabilities.error && <p role="alert">{capabilities.error}</p>}
       {capabilities.ready && !capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation") && <p className={styles.notice}>Preparation is disabled on the API.</p>}
       {inputToken === "QMS" && <p className={styles.notice}>MAX reserves a conservative gas budget. Unused gas stays in your wallet.</p>}
-      <ReviewButton inline onPrepared={(review, preparedIntent) => { const tx = review.transaction; setGasBudget(tx.gas && tx.gasPrice ? {key: JSON.stringify([wallet.account, wallet.chainId, preparedIntent]), amount: displayUnits((BigInt(tx.gas) * BigInt(tx.gasPrice)).toString(), 18), approval: review.approval} : undefined); }} key={`${wallet.account}:${wallet.chainId}`} intent={intent} enabled={capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation")} label={conversion ? `Review ${conversion.toLowerCase()}` : "Review swap"} onComplete={complete} />
+      <ReviewButton inline onSuccess={resetAfterSuccess} onPrepared={(review, preparedIntent) => { const tx = review.transaction; setGasBudget(tx.gas && tx.gasPrice ? {key: JSON.stringify([wallet.account, wallet.chainId, preparedIntent]), amount: displayUnits((BigInt(tx.gas) * BigInt(tx.gasPrice)).toString(), 18), approval: review.approval} : undefined); }} key={`${wallet.account}:${wallet.chainId}`} intent={intent} enabled={capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation")} label={conversion ? `Review ${conversion.toLowerCase()}` : "Review swap"} onComplete={complete} />
 
       <dialog ref={history} className={`${styles.settingsDialog} ${styles.historyDialog}`} aria-labelledby="history-title" onClose={() => { setHistoryOpen(false); historyButton.current?.focus(); }} onClick={event => {
         if (event.target !== event.currentTarget) return;

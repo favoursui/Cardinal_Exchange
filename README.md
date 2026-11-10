@@ -108,3 +108,13 @@ CARDINAL_BACKEND_DIR=/absolute/path/to/backend npm run test:trading-fork
 ```
 
 The harness exercises the actual backend preparations through the frontend validation and wallet submission code: wrap, unwrap, QMS-input swap, QMS-output swap, ERC-20 swap, exact approvals, deposit, full LP withdrawal, confirmations and history recording. Evidence is written to /tmp/cardinal-trading-fork-evidence.json. It requires a working upstream testnet RPC to populate the fork.
+
+## Wallet sign-in
+
+Connect the wallet, then choose **Sign in to Cardinal** in the wallet dialog. This requests an EIP-4361 ownership message, not a transaction or token approval. Sign-in is optional for trading. The initial implementation supports regular EOA wallets; smart-contract wallet signatures are not supported yet.
+
+Set server-only `AUTH_ORIGIN` to the exact frontend origin and enable backend `WALLET_AUTH_ENABLED=true` with Redis and the same `CORS_ORIGIN`. `AUTH_API_BASE_URL` optionally overrides the API URL for the server-side proxy. Local settings use `http://127.0.0.1:3000`. Restart after changing server configuration. Deployment requires a Next.js server, not a static export.
+
+Auth uses same-origin `/api/auth/*` requests, HttpOnly cookies and Redis sessions, without JWT or browser token storage. Challenges expire after five minutes and sessions after eight hours. HTTPS uses Secure cookies. Sign out revokes the session; disconnect/account/network changes also attempt sign-out. Swaps still need their own wallet confirmation. Profile and protected account APIs are not added by this change.
+
+Run `npm run test:auth` and `npm run test:wallet` to test proxy protection and wallet signing.

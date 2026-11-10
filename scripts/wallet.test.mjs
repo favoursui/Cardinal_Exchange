@@ -117,3 +117,22 @@ test('history import rejects account changes during lookup', async () => {
  p.emit('accountsChanged',[other]); finish({hash,from:address});
  await assert.rejects(work,/changed/);
 });
+
+test('sign-in signs a message only on explicit request and never submits a transaction',async()=>{
+ const c=new WalletController(),p=new Provider();await c.connect(option(p));
+ p.handlers.personal_sign=()=>`0x${'ab'.repeat(65)}`;
+ const message='Sign in to Cardinal Exchange';
+ assert.equal(await c.signInMessage(message),`0x${'ab'.repeat(65)}`);
+ const call=p.calls.find(c=>c.method==='personal_sign');assert.equal(call.params[1],address);
+ assert.equal(Buffer.from(call.params[0].slice(2),'hex').toString(),message);
+ assert.ok(!p.calls.some(c=>c.method==='eth_sendTransaction'));assert.equal(c.getSnapshot().busy,false);
+});
+test('sign-in rejects account changes during wallet confirmation and handles rejection',async()=>{
+ const c=new WalletController(),p=new Provider();await c.connect(option(p));
+ let resolve;p.handlers.personal_sign=()=>new Promise(r=>{resolve=r;});
+ const signing=c.signInMessage('Sign in');await tick();p.emit('accountsChanged',[other]);resolve(`0x${'ab'.repeat(65)}`);
+ await assert.rejects(signing,/Wallet changed/);
+ p.account=other;p.handlers.personal_sign=()=>{throw {code:4001};};
+ await assert.rejects(c.signInMessage('Sign in'),/declined/);assert.equal(c.getSnapshot().busy,false);
+ p.emit('chainChanged','0x1');await assert.rejects(c.signInMessage('Sign in'),/QMS Testnet/);
+});

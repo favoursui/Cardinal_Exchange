@@ -9,15 +9,15 @@ function harness({fail=false}={}) {
  let now=0,id=0,effect,state,calls=0,signal;
  const timers=new Map(),listeners=new Map();
  const document={visibilityState:'visible',addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)};
- const module={exports:{}};
+ const compiled={exports:{}};
  const dependencies={
   react:{useEffect:fn=>{effect=fn;},useState:initial=>[initial,value=>{state=value;}]},
   '@/lib/config/tokens':{tokenMetadata:{QMS:{address:'native',decimals:18},USDC:{address:'usdc',decimals:6}}},
   '@/features/trading/api':{api:async(_path,_body,s)=>{calls++;signal=s;if(fail)throw new Error('Unavailable');return {quotes:[{quoteId:String(calls),venue:'qwap',amountOut:'100',expiresAt:new Date(now+1000).toISOString()}]};}},
   '@/features/trading/validation':{parseQuote:q=>q},
  };
- runInNewContext(code,{exports:module.exports,require:name=>dependencies[name],AbortController,document,Date:{now:()=>now,parse:Date.parse},setTimeout:(fn,delay)=>{const key=++id;timers.set(key,{fn,at:now+delay});return key;},clearTimeout:key=>timers.delete(key)});
- module.exports.useRouteQuote('QMS','USDC','1','0.5',false);
+ runInNewContext(code,{exports:compiled.exports,require:name=>dependencies[name],AbortController,document,Date:{now:()=>now,parse:Date.parse},setTimeout:(fn,delay)=>{const key=++id;timers.set(key,{fn,at:now+delay});return key;},clearTimeout:key=>timers.delete(key)});
+ compiled.exports.useRouteQuote('QMS','USDC','1','0.5',false);
  const cleanup=effect();
  const advance=async ms=>{
   const end=now+ms;

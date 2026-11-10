@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {tokenMetadata,tokens,type Token} from '@/lib/config/tokens';
 import {useWallet} from '@/features/wallet/wallet-provider';
-import {baseUnits,displayUnits} from '@/features/swap/use-route-quote';
+import {baseUnits,displayUnits,displayBalance} from '@/features/swap/use-route-quote';
 import {api,object,uint} from './api';
 import {addr,same,type Intent} from './validation';
 import {ROUTER,FACTORY} from './contracts';
@@ -43,7 +43,7 @@ export function LiquidityCard() {
  <button type="button" className={styles.secondary} onClick={refresh}>Refresh pool and balances</button>
  <label className={styles.field}>{mode==='add'?`${tokenA} maximum deposit`:'LP tokens to remove'}<input inputMode="decimal" value={amountA} onChange={e=>{if(/^\d*(\.\d*)?$/.test(e.target.value))setAmountA(e.target.value);}} maxLength={79}/></label>
  {mode==='remove'&&pool&&wallet.account&&<button type="button" className={styles.secondary} onClick={()=>setAmountA(displayUnits(pool.lpBalance,18))}>Use all LP tokens</button>}
- {mode==='add'&&<><p className={styles.hint}>Balance: {balances.balances[tokenA]!==undefined?displayUnits(balances.balances[tokenA]!,tokenMetadata[tokenA].decimals):'—'} {tokenA}</p><label className={styles.field}>{tokenB} maximum deposit<input inputMode="decimal" value={amountB} onChange={e=>{if(/^\d*(\.\d*)?$/.test(e.target.value))setAmountB(e.target.value);}} maxLength={79}/></label><p className={styles.hint}>Balance: {balances.balances[tokenB]!==undefined?displayUnits(balances.balances[tokenB]!,tokenMetadata[tokenB].decimals):'—'} {tokenB}</p></>}
+ {mode==='add'&&<><p className={styles.hint}>Balance: {balances.balances[tokenA]!==undefined?displayBalance(balances.balances[tokenA]!,tokenMetadata[tokenA].decimals):'—'} {tokenA}</p><label className={styles.field}>{tokenB} maximum deposit<input inputMode="decimal" value={amountB} onChange={e=>{if(/^\d*(\.\d*)?$/.test(e.target.value))setAmountB(e.target.value);}} maxLength={79}/></label><p className={styles.hint}>Balance: {balances.balances[tokenB]!==undefined?displayBalance(balances.balances[tokenB]!,tokenMetadata[tokenB].decimals):'—'} {tokenB}</p></>}
  <div className={styles.field}>Slippage tolerance: {slippage}%<button type="button" className={styles.secondary} onClick={settings.open}>Change slippage</button></div>
  {!validSlippage&&<p className={styles.error}>Use 0–5%, with up to two decimal places.</p>}
  {capabilities.error&&<p className={styles.error}>{capabilities.error}</p>}

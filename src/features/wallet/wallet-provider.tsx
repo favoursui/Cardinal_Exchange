@@ -1,5 +1,6 @@
 "use client";
 
+import { WalletSignIn, signOutWallet } from './sign-in';
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { isProvider, QMS_CHAIN_ID, WalletController, type WalletOption, type WalletState } from './controller';
 import { saveTransaction } from '@/features/history/store';
@@ -71,8 +72,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     catch { historySaved = false; }
     return {hash, historySaved};
   };
+  const previousIdentity=useRef<string|null>(null);
+  const identity=state.account?`${state.account.toLowerCase()}:${state.chainId}`:null;
+  useEffect(()=>{
+    const previous=previousIdentity.current;
+    previousIdentity.current=identity;
+    if(previous&&previous!==identity)void signOutWallet().catch(()=>setConfigError('Server sign-out failed. Please retry sign-out; the session otherwise expires automatically.'));
+  },[identity]);
+  const disconnect=controller.disconnect;
   const correctNetwork = state.chainId === QMS_CHAIN_ID;
-  return <WalletContext.Provider value={{ ...state, correctNetwork, open, disconnect: controller.disconnect, verifyTransaction: controller.verifyTransaction, readRpc: controller.readRpc, sendTransaction }}>
+  return <WalletContext.Provider value={{ ...state, correctNetwork, open, disconnect, verifyTransaction: controller.verifyTransaction, readRpc: controller.readRpc, sendTransaction }}>
     {children}
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="wallet-title" onClose={() => trigger.current?.focus()} onClick={event => {
       if (event.target !== event.currentTarget) return;
@@ -86,7 +95,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           <p className={styles.address}>{state.account}</p>
           <p role="status">{correctNetwork ? 'Connected to QMS Testnet' : 'Switch to QMS Testnet to continue.'}</p>
           {!correctNetwork && <button type="button" className={styles.primary} disabled={state.busy} onClick={switchNetwork}>Switch to QMS Testnet</button>}
-          <button type="button" className={styles.secondary} onClick={controller.disconnect}>Disconnect</button>
+          <WalletSignIn key={`${state.account}:${state.chainId}`} account={state.account} correctNetwork={correctNetwork} controller={controller} />
+          <button type="button" className={styles.secondary} onClick={disconnect}>Disconnect</button>
           <p className={styles.hint}>Disconnect removes this app’s connection. Manage site permissions in your wallet.</p>
         </> : <>
           <p>Choose a wallet available in this browser.</p>

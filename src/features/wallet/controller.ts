@@ -90,6 +90,26 @@ export class WalletController {
     if (!account || !chainId) throw new Error('Invalid wallet state');
     this.update({ account, chainId });
   }
+  signInMessage = async (message:string):Promise<string> => {
+    const provider=this.provider,epoch=this.epoch,account=this.state.account;
+    const revision=this.accountRevision,chainRevision=this.chainRevision;
+    if(!provider||!account||this.state.busy||this.sending||this.state.chainId!==QMS_CHAIN_ID||!message||message.length>2048)throw new Error('Connect your wallet to QMS Testnet first.');
+    this.update({busy:true});
+    const check=()=>{if(this.epoch!==epoch||this.accountRevision!==revision||this.chainRevision!==chainRevision||this.state.account!==account||this.state.chainId!==QMS_CHAIN_ID)throw new Error('Wallet changed. Please sign in again.');};
+    try {
+      const [accounts,chain]=await Promise.all([provider.request({method:'eth_accounts'}),provider.request({method:'eth_chainId'})]);
+      check();if(accountOf(accounts)?.toLowerCase()!==account.toLowerCase()||chainOf(chain)!==QMS_CHAIN_ID)throw new Error('Wallet changed. Please sign in again.');
+      const bytes=new TextEncoder().encode(message);
+      const hex='0x'+Array.from(bytes,value=>value.toString(16).padStart(2,'0')).join('');
+      const signature=await provider.request({method:'personal_sign',params:[hex,account]});
+      const [currentAccounts,currentChain]=await Promise.all([provider.request({method:'eth_accounts'}),provider.request({method:'eth_chainId'})]);
+      check();
+      if(accountOf(currentAccounts)?.toLowerCase()!==account.toLowerCase()||chainOf(currentChain)!==QMS_CHAIN_ID)throw new Error('Wallet changed. Please sign in again.');
+      if(typeof signature!=='string'||!/^0x[0-9a-fA-F]{130}$/.test(signature))throw new Error('Unsupported wallet signature.');
+      return signature;
+    }catch(error){if(errorCode(error)!==undefined)throw new Error(errorMessage(error));throw error;}
+    finally{if(this.epoch===epoch)this.update({busy:false});}
+  };
   connect = async (wallet: WalletOption) => {
     if (this.state.busy) return;
     this.disconnect();
