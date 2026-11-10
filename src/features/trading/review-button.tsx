@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
 import {decodeFunctionResult,encodeFunctionData,keccak256,type Hex} from 'viem';
 import {useWallet} from '@/features/wallet/wallet-provider';
 import {qmsWalletChain} from '@/features/wallet/network';
@@ -185,7 +186,19 @@ function SwapAction({intent,enabled,onComplete,onPrepared,onSuccess}:ActionProps
  return <>
   <button type="button" className={styles.primary} disabled={sending||wallet.busy||pending||(!!account&&correctNetwork&&(!enabled||!intent||(!review&&!error)))} onClick={()=>void submit()}>{label}</button>
   {error&&<p role="alert" className={styles.error}>{error}</p>}
-  {result&&<p role="status" className={styles.hint}>{statusError?'Status unavailable — check the explorer.':status?statusLabels[status]:'Transaction submitted.'} {explorer&&<a href={`${explorer}/tx/${result.hash}`} target="_blank" rel="noopener noreferrer">View transaction ↗</a>}</p>}
+  {result&&status!=='confirmed'&&<p role="status" className={styles.hint}>{statusError?'Status unavailable — check the explorer.':status?statusLabels[status]:'Transaction submitted.'} {explorer&&<a href={`${explorer}/tx/${result.hash}`} target="_blank" rel="noopener noreferrer">View transaction ↗</a>}</p>}
+  {result&&status==='confirmed'&&<SuccessToast key={result.hash} title={result.approval?'Approval confirmed':result.intent.kind==='swap'?'Swap successful':'Conversion successful'} href={explorer?`${explorer}/tx/${result.hash}`:undefined} />}
   {result&&!result.historySaved&&<p role="alert" className={styles.hash}>History could not be saved. Keep this hash: {result.hash}</p>}
  </>;
+}
+
+function SuccessToast({title,href}:{title:string;href?:string}) {
+ const [visible,setVisible]=useState(true);
+ useEffect(()=>{const timer=setTimeout(()=>setVisible(false),5000);return()=>clearTimeout(timer);},[]);
+ if(!visible)return null;
+ return createPortal(<div className={styles.successToast} role="status" aria-live="polite">
+  <span className={styles.successIcon} aria-hidden="true">✓</span>
+  <div><strong>{title}</strong>{href&&<a href={href} target="_blank" rel="noopener noreferrer">View transaction ↗</a>}</div>
+  <button type="button" aria-label="Dismiss transaction notification" onClick={()=>setVisible(false)}>×</button>
+ </div>,document.body);
 }

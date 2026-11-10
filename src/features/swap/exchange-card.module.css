@@ -9,12 +9,12 @@
 .iconButton > svg { transition: transform 350ms ease; transform-origin: center; }
 .iconButton:not(:disabled):focus-visible { transform: translateY(-1px); }
 .iconButton[aria-label="Transaction history"]:focus-visible > svg { transform: rotate(180deg); }
-.iconButton[aria-label="Refresh quote"]:not(:disabled):focus-visible > svg { transform: rotate(180deg); }
+.iconButton[aria-label="Reset swap amounts"]:not(:disabled):focus-visible > svg { transform: rotate(180deg); }
 .iconButton[aria-label="Swap settings"]:not(:disabled):focus-visible > svg { transform: rotate(180deg); }
 @media (hover: hover) {
   .iconButton:not(:disabled):hover { background: #ffffff05; border-color: #ffffff08; transform: translateY(-1px); }
   .iconButton[aria-label="Transaction history"]:hover > svg { transform: rotate(180deg); }
-  .iconButton[aria-label="Refresh quote"]:not(:disabled):hover > svg { transform: rotate(180deg); }
+  .iconButton[aria-label="Reset swap amounts"]:not(:disabled):hover > svg { transform: rotate(180deg); }
   .iconButton[aria-label="Swap settings"]:not(:disabled):hover > svg { transform: rotate(180deg); }
 }
 @media (prefers-reduced-motion: reduce) {

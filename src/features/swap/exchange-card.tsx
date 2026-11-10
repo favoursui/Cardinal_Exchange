@@ -158,7 +158,7 @@ export function ExchangeCard() {
         <h1 id="exchange-title">{conversion ?? "Exchange"}</h1>
         <div className={styles.tools}>
           <button ref={historyButton} type="button" className={styles.iconButton} onClick={() => { setHistoryOpen(true); history.current?.showModal(); }} aria-label="Transaction history" aria-haspopup="dialog" title="Transaction history"><Icon name="history" /></button>
-          <button type="button" className={styles.iconButton} disabled={!route.enabled} onClick={route.refresh} aria-label="Refresh quote" title="Refresh quote"><Icon name="refresh" /></button>
+          <button type="button" className={styles.iconButton} onClick={() => { setAmount("0.00"); setGasBudget(undefined); setOpenRoutesKey(null); setMaxError(""); }} aria-label="Reset swap amounts" title="Reset amounts"><Icon name="refresh" /></button>
           <button type="button" className={styles.iconButton} disabled={!!conversion} onClick={settings.open} aria-label="Swap settings"><Icon name="settings" /></button>
         </div>
       </div>

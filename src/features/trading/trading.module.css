@@ -25,3 +25,12 @@
 .inlineReview { margin-top: 16px; padding-top: 16px; border-top: 1px solid #344356; font-size: 12px; }
 .inlineReview p { margin: 10px 0; line-height: 1.5; }
 .inlineReview .heading h2 { font-size: 14px; }
+
+.successToast { position: fixed; right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); z-index: 1000; display: flex; align-items: center; gap: 12px; width: min(340px, calc(100vw - 32px)); padding: 16px; border: 1px solid #344356; border-radius: var(--radius-sm, 0.25rem); background: #20242c; color: #eef1f6; box-shadow: 0 8px 32px #0006; animation: toastEnter 180ms ease-out; }
+.successToast strong { display: block; font-size: 14px; }
+.successToast a { display: block; margin-top: 5px; color: #9fc3ff; font-size: 12px; text-decoration: underline; }
+.successToast button { margin-left: auto; align-self: flex-start; padding: 0 4px; color: #a5afbd; font-size: 20px; cursor: pointer; }
+.successIcon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #32cf9820; color: #63e6b8; }
+@keyframes toastEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 480px) { .successToast { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); } }
+@media (prefers-reduced-motion: reduce) { .successToast { animation: none; } }
