@@ -95,9 +95,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           <p className={styles.address}>{state.account}</p>
           <p role="status">{correctNetwork ? 'Connected to QMS Testnet' : 'Switch to QMS Testnet to continue.'}</p>
           {!correctNetwork && <button type="button" className={styles.primary} disabled={state.busy} onClick={switchNetwork}>Switch to QMS Testnet</button>}
-          <WalletSignIn key={`${state.account}:${state.chainId}`} account={state.account} correctNetwork={correctNetwork} controller={controller} />
+          <WalletSignIn key={`${state.account}:${state.chainId}`} account={state.account} correctNetwork={correctNetwork} controller={controller} walletBusy={state.busy} />
           <button type="button" className={styles.secondary} onClick={disconnect}>Disconnect</button>
-          <p className={styles.hint}>Disconnect removes this app’s connection. Manage site permissions in your wallet.</p>
+          <p className={styles.hint}>Disconnect ends your sign-in session and removes this app’s wallet connection.</p>
         </> : <>
           <p>Choose a wallet available in this browser.</p>
           {wallets.length ? <ul className={styles.list}>{wallets.map(wallet => <li key={wallet.id}><button type="button" disabled={state.busy} onClick={() => { setConfigError(null); void controller.connect(wallet); }}><WalletLogo source={wallet.icon} /><span>{wallet.name}</span><span aria-hidden="true">›</span></button></li>)}</ul> : <p className={styles.empty}>No browser wallet detected. Enable your wallet extension, or open Cardinal in your wallet’s built-in browser.</p>}

@@ -69,11 +69,11 @@ npm run tunnel
 
 ## Wallet connection
 
-Connect wallet opens a chooser for installed browser wallets using [EIP-6963 discovery](https://eips.ethereum.org/EIPS/eip-6963), with an EIP-1193 window.ethereum fallback. It also works in wallet browsers exposing a compatible provider. QR-based WalletConnect sessions are not integrated. No signing request is made when connecting, and no keys or wallet permissions are stored by the app. Reloading requires connecting again.
+Connect wallet opens a chooser for installed browser wallets using [EIP-6963 discovery](https://eips.ethereum.org/EIPS/eip-6963), with an EIP-1193 window.ethereum fallback. It also works in wallet browsers exposing a compatible provider. QR-based WalletConnect sessions are not integrated. After connection on QMS Testnet, a sign-in message is requested automatically if no valid session exists. No private keys or wallet permissions are stored by the app. Reloading requires connecting again.
 
 The navbar displays the connected account; the swap card uses the same account and network state. Account changes, chain changes, permission removal and provider disconnects update the UI. A wallet on another chain can explicitly switch to QMS Testnet (19480); if missing, the wallet is asked to add it using the public NEXT_PUBLIC_QMS_RPC_URL and NEXT_PUBLIC_QMS_EXPLORER_URL configuration. Both default to the public testnet endpoints. No backend RPC credentials should be used in browser configuration.
 
-Disconnect clears the local connection; it does not revoke the wallet's site permissions or cancel an already-open wallet prompt. Those are controlled in the wallet. Wallet submission happens only after explicit review and confirmation. Connecting never asks for a signature.
+Disconnect clears the local connection; it does not revoke the wallet's site permissions or cancel an already-open wallet prompt. Those are controlled in the wallet. Wallet submission happens only after explicit review and confirmation. The ownership signature is separate from all transaction approvals.
 
 ## Transaction history
 
@@ -111,7 +111,7 @@ The harness exercises the actual backend preparations through the frontend valid
 
 ## Wallet sign-in
 
-Connect the wallet, then choose **Sign in to Cardinal** in the wallet dialog. This requests an EIP-4361 ownership message, not a transaction or token approval. Sign-in is optional for trading. The initial implementation supports regular EOA wallets; smart-contract wallet signatures are not supported yet.
+After you connect a wallet on QMS Testnet, Cardinal checks for an existing session and automatically requests one EIP-4361 ownership signature if needed. There is no separate initial sign-in button. Cancelling does not trigger repeated prompts; use Retry ownership verification if you want to try again. Signing out does not immediately sign you back in. This signs a message, not a transaction or token approval. Sign-in is optional for trading. The initial implementation supports regular EOA wallets; smart-contract wallet signatures are not supported yet.
 
 Set server-only `AUTH_ORIGIN` to the exact frontend origin and enable backend `WALLET_AUTH_ENABLED=true` with Redis and the same `CORS_ORIGIN`. `AUTH_API_BASE_URL` optionally overrides the API URL for the server-side proxy. Local settings use `http://127.0.0.1:3000`. Restart after changing server configuration. Deployment requires a Next.js server, not a static export.
 

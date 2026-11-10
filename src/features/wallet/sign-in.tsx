@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {parseSiweMessage} from 'viem/siwe';
 import type {WalletController} from './controller';
 import styles from './wallet.module.css';
@@ -18,23 +18,23 @@ async function requestAuth(action:string,body?:unknown) {
  return response.json() as Promise<{address?:string;message?:string;expiresAt?:number}>;
 }
 export const signOutWallet=()=>auth('logout',{});
-export function WalletSignIn({account,correctNetwork,controller}:{account:string;correctNetwork:boolean;controller:WalletController}) {
+export function WalletSignIn({account,correctNetwork,controller,walletBusy}:{account:string;correctNetwork:boolean;controller:WalletController;walletBusy:boolean}) {
  const [ready,setReady]=useState(false);
  const [expires,setExpires]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const alive=useRef(true),locked=useRef(false);
+ const alive=useRef(true),locked=useRef(false),attempted=useRef(false);
  useEffect(()=>{
   alive.current=true;
-  let expiry:ReturnType<typeof setTimeout>;
+  let cancelled=false;
   void auth('session').then(async session=>{
-   if(!alive.current)return;
+   if(cancelled)return;
    if(session?.address?.toLowerCase()===account.toLowerCase()&&typeof session.expiresAt==='number'&&session.expiresAt>Date.now()){
-    setExpires(session.expiresAt);expiry=setTimeout(()=>setExpires(0),session.expiresAt-Date.now());
+    attempted.current=true;setExpires(session.expiresAt);
    }else if(session)await signOutWallet();
-  }).catch(()=>{}).finally(()=>{if(alive.current)setReady(true);});
-  return()=>{alive.current=false;clearTimeout(expiry);};
+  }).catch(()=>{if(!cancelled){attempted.current=true;setError('Could not check your session. Retry ownership verification.');}}).finally(()=>{if(!cancelled)setReady(true);});
+  return()=>{cancelled=true;alive.current=false;};
  },[account]);
- useEffect(()=>{if(!expires)return;const timer=setTimeout(()=>setExpires(0),Math.max(0,expires-Date.now()));return()=>clearTimeout(timer);},[expires]);
- const signIn=async()=>{
+ useEffect(()=>{if(!expires)return;const timer=setTimeout(()=>{setExpires(0);setError('Session expired. Verify ownership again when you are ready.');},Math.max(0,expires-Date.now()));return()=>clearTimeout(timer);},[expires]);
+ const signIn=useCallback(async()=>{
   if(locked.current||!correctNetwork)return;
   locked.current=true;setBusy(true);setError('');
   try {
@@ -51,11 +51,19 @@ export function WalletSignIn({account,correctNetwork,controller}:{account:string
    setExpires(session.expiresAt);
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Sign-in failed.');}
   finally{locked.current=false;if(alive.current)setBusy(false);}
- };
- const signOut=async()=>{if(locked.current)return;locked.current=true;setBusy(true);setError('');try{await signOutWallet();setExpires(0);}catch{setError('Could not sign out. Please retry.');}finally{locked.current=false;setBusy(false);}};
+ },[account,correctNetwork,controller]);
+ useEffect(()=>{
+  if(!ready||!correctNetwork||walletBusy||expires)return;
+  const timer=setTimeout(()=>{
+   if(attempted.current)return;
+   attempted.current=true;
+   void signIn();
+  },0);
+  return()=>clearTimeout(timer);
+ },[ready,correctNetwork,walletBusy,expires,signIn]);
  return <>
-  <p role="status">{expires?'Signed in to Cardinal':'Wallet connected · not signed in'}</p>
-  <button type="button" className={styles.primary} disabled={!ready||busy||(!expires&&!correctNetwork)} onClick={()=>void (expires?signOut():signIn())}>{busy?'Confirming…':expires?'Sign out':'Sign in to Cardinal'}</button>
+  <p role="status">{expires?'Signed in to Cardinal':busy?'Confirm ownership in your wallet…':!ready?'Checking wallet session…':'Wallet connected · not signed in'}</p>
+  {!expires&&!!error&&<button type="button" className={styles.primary} disabled={!ready||busy||walletBusy||!correctNetwork} onClick={()=>void signIn()}>Retry ownership verification</button>}
   {!expires&&<p className={styles.hint}>Sign a message to prove wallet ownership. No gas or token approval.</p>}
   {error&&<p role="alert" className={styles.error}>{error}</p>}
  </>;
