@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {loadTS} from './load-ts.mjs';
 const {POST,GET}=loadTS('src/app/api/auth/[action]/route.ts');
-const origin='https://cardinal.example';
+const origin='https://cadinal.example';
 const context=action=>({params:Promise.resolve({action})});
 test('auth proxy rejects untrusted origins and paths before contacting the API',async()=>{
  const previous={origin:process.env.AUTH_ORIGIN,base:process.env.AUTH_API_BASE_URL,fetch:globalThis.fetch};
@@ -22,11 +22,11 @@ test('auth proxy forwards only auth cookies and preserves HttpOnly Set-Cookie he
   process.env.AUTH_ORIGIN=origin;process.env.AUTH_API_BASE_URL='https://api.example';
   globalThis.fetch=async(url,options)=>{
    assert.equal(url,'https://api.example/v1/auth/verify');assert.equal(options.headers.get('Origin'),origin);
-   assert.equal(options.headers.get('Cookie'),'__Host-cardinal-challenge=abc');assert.equal(options.redirect,'error');
-   const headers=new Headers({'Content-Type':'application/json'});headers.append('Set-Cookie','__Host-cardinal-session=secret; HttpOnly; Secure; SameSite=Lax; Path=/');headers.append('Set-Cookie','__Host-cardinal-challenge=; Max-Age=0; Path=/');
+   assert.equal(options.headers.get('Cookie'),'__Host-cadinal-challenge=abc');assert.equal(options.redirect,'error');
+   const headers=new Headers({'Content-Type':'application/json'});headers.append('Set-Cookie','__Host-cadinal-session=secret; HttpOnly; Secure; SameSite=Lax; Path=/');headers.append('Set-Cookie','__Host-cadinal-challenge=; Max-Age=0; Path=/');
    return new Response('{}',{headers});
   };
-  const response=await POST(new Request(`${origin}/api/auth/verify`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Cookie:'other=private; __Host-cardinal-challenge=abc'},body:'{}'}),context('verify'));
+  const response=await POST(new Request(`${origin}/api/auth/verify`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Cookie:'other=private; __Host-cadinal-challenge=abc'},body:'{}'}),context('verify'));
   assert.equal(response.status,200);assert.equal(response.headers.getSetCookie().length,2);assert.equal(response.headers.get('Cache-Control'),'no-store');
  }finally{globalThis.fetch=previous.fetch;for(const [k,v] of [['AUTH_ORIGIN',previous.origin],['AUTH_API_BASE_URL',previous.base]]){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 });

@@ -16,6 +16,9 @@ export async function api(path: string, body?: unknown, signal?: AbortSignal): P
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout, credentials: 'omit', cache: 'no-store' });
   const data = object(await response.json());
   if (!response.ok) {
+    if (data.error === 'BLOCK_REORG') {
+      throw new Error('please refresh to fetch new quote');
+    }
     const code = typeof data.error === 'string' && /^[A-Z_]{1,80}$/.test(data.error) ? data.error.toLowerCase().replaceAll('_', ' ') : 'request unavailable';
     throw new Error(`API: ${code}. Please refresh and try again.`);
   }

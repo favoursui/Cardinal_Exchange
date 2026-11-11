@@ -27,3 +27,12 @@ test('status decoding handles all backend states and rejects another hash or cha
  for(const status of Object.keys(statusLabels))assert.equal(parseStatus({...base,status},hash).status,status);
  for(const patch of [{chainId:1},{hash:'0x'+'22'.repeat(32)},{status:'success'},{confirmations:'NaN'},{observedAt:'invalid'}])assert.throws(()=>parseStatus({...base,status:'pending',...patch},hash));
 });
+test('keeps legacy browser history accessible and writes new records under Cadinal',()=>{
+ const s=storage();
+ s.setItem(`cardinal:transactions:v1:19480:${account}`,JSON.stringify([{hash,addedAt:new Date(0).toISOString()}]));
+ assert.equal(readHistory(s,account)[0].hash,hash);
+ const next='0x'+'22'.repeat(32);
+ saveTransaction(s,account,next);
+ assert.equal(JSON.parse(s.getItem(`cadinal:transactions:v1:19480:${account}`)).length,2);
+ assert.equal(readHistory(s,account)[0].hash,next);
+});

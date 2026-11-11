@@ -4,7 +4,7 @@ import {parseSiweMessage} from 'viem/siwe';
 import type {WalletController} from './controller';
 import styles from './wallet.module.css';
 
-const statement='Sign in to Cardinal Exchange. This proves wallet ownership and does not authorize transactions or cost gas.';
+const statement='Sign in to Cadinal Exchange. This proves wallet ownership and does not authorize transactions or cost gas.';
 let pendingAuth:Promise<unknown>=Promise.resolve();
 function auth(action:string,body?:unknown) {
  const request=pendingAuth.then(()=>requestAuth(action,body));
@@ -62,7 +62,7 @@ export function WalletSignIn({account,correctNetwork,controller,walletBusy}:{acc
   return()=>clearTimeout(timer);
  },[ready,correctNetwork,walletBusy,expires,signIn]);
  return <>
-  <p role="status">{expires?'Signed in to Cardinal':busy?'Confirm ownership in your wallet…':!ready?'Checking wallet session…':'Wallet connected · not signed in'}</p>
+  {!expires&&<p role="status">{busy?'Confirm ownership in your wallet…':!ready?'Checking wallet session…':'Wallet connected · not signed in'}</p>}
   {!expires&&!!error&&<button type="button" className={styles.primary} disabled={!ready||busy||walletBusy||!correctNetwork} onClick={()=>void signIn()}>Retry ownership verification</button>}
   {!expires&&<p className={styles.hint}>Sign a message to prove wallet ownership. No gas or token approval.</p>}
   {error&&<p role="alert" className={styles.error}>{error}</p>}

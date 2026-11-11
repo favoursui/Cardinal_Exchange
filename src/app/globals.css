@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: dark;
-  --background: #0c0d0f;
+  --background: #182029;
   --foreground: #f6f7f9;
   --accent: #2b6cf2;
 }
@@ -17,30 +17,30 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
 button, summary, a { -webkit-tap-highlight-color: transparent; }
 a { text-decoration: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
-.exchange-header { background: #111214; border-top: 1px solid #54575c; border-bottom: 1px solid #2b2d33; }
+.exchange-header { background: var(--background); border-top: 1px solid var(--theme-border, #54575c); border-bottom: 1px solid var(--theme-border, #2b2d33); }
 .exchange-nav { position: relative; min-height: 82px; padding: 0 24px 0 20px; display: flex; align-items: center; gap: 22px; }
 .brand { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; color: #fff; }
 .brand-mark { display: flex; color: var(--accent); }
 .brand-name { font-family: Georgia, "Times New Roman", serif; font-size: 27px; font-weight: 700; font-variant: small-caps; letter-spacing: -.7px; }
 .nav-links { display: flex; align-items: center; gap: 24px; }
 .trade-menu { position: relative; }
-.trade-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 12px; background: transparent; color: #7f94af; border-bottom: 2px solid transparent; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
+.trade-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 12px; background: transparent; color: var(--theme-muted, #7f94af); border-bottom: 2px solid transparent; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
 .trade-menu:has([aria-current="page"]) > .trade-trigger, .nav-link[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
 .trade-trigger::-webkit-details-marker { display: none; }
 .trade-menu[open] .trade-trigger svg { transform: rotate(180deg); }
-.trade-options { position: absolute; top: calc(100% + 13px); left: 0; z-index: 20; width: 200px; padding: 6px; background: #191c22; border: 1px solid #303640; border-radius: 14px; box-shadow: 0 12px 32px #0006; }
-.trade-options a, .trade-options button { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 12px; border-radius: 9px; font-size: 14px; color: #bdcbe0; }
-.trade-options a:hover { background: #253545; color: var(--accent); }
-.trade-options button:disabled { color: #8894a6; cursor: not-allowed; }
+.trade-options { position: absolute; top: calc(100% + 13px); left: 0; z-index: 20; width: 200px; padding: 6px; background: var(--theme-surface, #191c22); border: 1px solid var(--theme-border, #303640); border-radius: 14px; box-shadow: 0 12px 32px #0006; }
+.trade-options a, .trade-options button { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 12px; border-radius: 9px; font-size: 14px; color: var(--theme-muted, #bdcbe0); }
+.trade-options a:hover { background: var(--theme-inset, #253545); color: var(--accent); }
+.trade-options button:disabled { color: var(--theme-muted, #8894a6); cursor: not-allowed; }
 .soon-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; }
-.nav-link { min-height: 36px; padding: 0 12px; background: transparent; border-bottom: 2px solid transparent; color: #7f94af; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.nav-link { min-height: 36px; padding: 0 12px; background: transparent; border-bottom: 2px solid transparent; color: var(--theme-muted, #7f94af); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .nav-link:disabled, .settings-button:disabled, .wallet-button:disabled { cursor: not-allowed; }
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; }
-.network-pill { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 15px; border-radius: 999px; background: #23262e; color: #edf1f7; font-size: 14px; font-weight: 600; white-space: nowrap; }
-.network-mark { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #36546c; color: #b7d9ff; font-size: 13px; }
-.network-testnet { color: #9eacc0; font-size: 12px; font-weight: 400; }
-.settings-button { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #eef1f6; transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease; }
-.settings-button > svg { transition: transform 350ms ease; transform-origin: center; }
+.network-pill { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 15px; border-radius: var(--radius-sm, 0.25rem); background: var(--theme-inset, #23262e); color: var(--theme-text, #edf1f7); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.network-mark { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--theme-inset, #36546c); color: var(--theme-muted, #b7d9ff); font-size: 13px; }
+.network-testnet { color: var(--theme-muted, #9eacc0); font-size: 12px; font-weight: 400; }
+.settings-button { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--theme-text, #eef1f6); transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease, scale 140ms ease; }
+.settings-button > svg { transition: transform 350ms ease, scale 140ms ease; transform-origin: center; }
 @media (hover: hover) {
   .settings-button:hover { background: #ffffff05; border-color: #ffffff08; transform: translateY(-1px); }
   .settings-button:hover > svg { transform: rotate(180deg); }
@@ -54,8 +54,8 @@ a { text-decoration: none; }
 @media (max-width: 800px) {
   .exchange-nav { padding: 16px; gap: 16px; }
   .brand-name { display: none; }
-  .mobile-menu-button { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 9px; background: #23262e; color: #d1def0; cursor: pointer; }
-  .nav-links { display: none; position: absolute; top: calc(100% + 1px); left: 12px; right: 12px; z-index: 30; padding: 12px; flex-direction: column; align-items: stretch; gap: 8px; background: #191c22; border: 1px solid #303640; border-radius: 14px; box-shadow: 0 12px 32px #0006; }
+  .mobile-menu-button { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 9px; background: var(--theme-inset, #23262e); color: var(--theme-muted, #d1def0); cursor: pointer; }
+  .nav-links { display: none; position: absolute; top: calc(100% + 1px); left: 12px; right: 12px; z-index: 30; padding: 12px; flex-direction: column; align-items: stretch; gap: 8px; background: var(--theme-surface, #191c22); border: 1px solid var(--theme-border, #303640); border-radius: 14px; box-shadow: 0 12px 32px #0006; }
   .nav-links[data-open="true"] { display: flex; }
   .nav-links .trade-trigger { justify-content: space-between; min-height: 44px; border-radius: 0; }
   .nav-links .trade-options { position: static; width: 100%; margin-top: 6px; box-shadow: none; }
@@ -82,3 +82,46 @@ html:has(dialog[open]) { overflow: hidden; }
 .account-identicon svg { display: block; width: 100%; height: 100%; }
 
 .settings-button:not(:disabled) { cursor: pointer; }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f7f5f0;
+  --foreground: #202733;
+  --theme-surface: #fffdf9;
+  --theme-inset: #eeece6;
+  --theme-text: #202733;
+  --theme-muted: #586779;
+  --theme-border: #d4d7dc;
+  --theme-error: #b42332;
+  --theme-success: #087b54;
+  --theme-warning: #886414;
+}
+:root[data-theme="light"] .brand { color: var(--foreground); }
+.theme-toggle { display: grid; flex-shrink: 0; }
+@media (hover: hover) {
+  :root[data-theme="light"] .theme-toggle:hover { background: #00000005; border-color: #00000008; }
+}
+
+/* Independent scale keeps existing positioning and hover rotations intact. */
+:where(a[href]) { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  :where(button, a[href], summary, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]) {
+    transition: scale 140ms ease;
+  }
+  :where(button, a[href], summary, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]):not(:disabled):not([aria-disabled="true"]):active {
+    scale: 0.96;
+  }
+}
+
+/* Reveal the new theme from the toggle without blending the two palettes. */
+.theme-revealing::view-transition-old(root),
+.theme-revealing::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+.theme-revealing::view-transition-old(root) { z-index: 1; }
+.theme-revealing::view-transition-new(root) { z-index: 2; animation: theme-reveal 400ms ease-out both; }
+@keyframes theme-reveal {
+  from { clip-path: circle(0 at var(--theme-reveal-x) var(--theme-reveal-y)); }
+  to { clip-path: circle(var(--theme-reveal-radius) at var(--theme-reveal-x) var(--theme-reveal-y)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-revealing::view-transition-new(root) { animation: none; }
+}

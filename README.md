@@ -1,6 +1,6 @@
-# Cardinal frontend
+# Cadinal frontend
 
-Next.js App Router, React, TypeScript and Tailwind CSS. Trading is implemented for QMS Testnet: browser-wallet connection, live token balances, native and ERC-20 swaps, wrap/unwrap, exact approvals, existing-pool liquidity deposits/withdrawals, and local transaction history. Cardinal AI and Profile remain out of scope.
+Next.js App Router, React, TypeScript and Tailwind CSS. Trading is implemented for QMS Testnet: browser-wallet connection, live token balances, native and ERC-20 swaps, wrap/unwrap, exact approvals, existing-pool liquidity deposits/withdrawals, and local transaction history. Cadinal AI and Profile remain out of scope.
 
 ## Run
 
@@ -104,14 +104,14 @@ The integration test uses a fixed localhost transaction endpoint, checks Anvil a
 ```sh
 anvil --fork-url https://rpc.testnet.qms.finance --port 18546 --host 127.0.0.1 --chain-id 19480
 # Separate terminal, in frontend:
-CARDINAL_BACKEND_DIR=/absolute/path/to/backend npm run test:trading-fork
+CADINAL_BACKEND_DIR=/absolute/path/to/backend npm run test:trading-fork
 ```
 
-The harness exercises the actual backend preparations through the frontend validation and wallet submission code: wrap, unwrap, QMS-input swap, QMS-output swap, ERC-20 swap, exact approvals, deposit, full LP withdrawal, confirmations and history recording. Evidence is written to /tmp/cardinal-trading-fork-evidence.json. It requires a working upstream testnet RPC to populate the fork.
+The harness exercises the actual backend preparations through the frontend validation and wallet submission code: wrap, unwrap, QMS-input swap, QMS-output swap, ERC-20 swap, exact approvals, deposit, full LP withdrawal, confirmations and history recording. Evidence is written to /tmp/cadinal-trading-fork-evidence.json. It requires a working upstream testnet RPC to populate the fork.
 
 ## Wallet sign-in
 
-After you connect a wallet on QMS Testnet, Cardinal checks for an existing session and automatically requests one EIP-4361 ownership signature if needed. There is no separate initial sign-in button. Cancelling does not trigger repeated prompts; use Retry ownership verification if you want to try again. Signing out does not immediately sign you back in. This signs a message, not a transaction or token approval. Sign-in is optional for trading. The initial implementation supports regular EOA wallets; smart-contract wallet signatures are not supported yet.
+After you connect a wallet on QMS Testnet, Cadinal checks for an existing session and automatically requests one EIP-4361 ownership signature if needed. There is no separate initial sign-in button. Cancelling does not trigger repeated prompts; use Retry ownership verification if you want to try again. Signing out does not immediately sign you back in. This signs a message, not a transaction or token approval. Sign-in is optional for trading. The initial implementation supports regular EOA wallets; smart-contract wallet signatures are not supported yet.
 
 Set server-only `AUTH_ORIGIN` to the exact frontend origin and enable backend `WALLET_AUTH_ENABLED=true` with Redis and the same `CORS_ORIGIN`. `AUTH_API_BASE_URL` optionally overrides the API URL for the server-side proxy. Local settings use `http://127.0.0.1:3000`. Restart after changing server configuration. Deployment requires a Next.js server, not a static export.
 

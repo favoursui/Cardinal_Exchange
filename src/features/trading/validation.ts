@@ -12,7 +12,7 @@ const pathAddress = (token: Token) => token === 'QMS' ? WQMS : addressOf(token);
 export type TradingQuote = { quoteId: string; venue: string; venueName: string; amountOut: string; minimumAmountOut: string; expiresAt: string; path: Address[]; pools: Address[]; tokenIn: Token; tokenOut: Token; amountIn: string; slippageBps: number };
 export function parseQuote(value: unknown, input: Token, output: Token, amount: string, slippage: number): TradingQuote {
  const q=object(value), path=(q.path as unknown[]), pools=(q.pools as unknown[]);
- requireThat(q.chainId===19480 && q.venue==='qwap' && same(q.router,ROUTER) && !q.cardinalFee && same(q.tokenIn,addressOf(input)) && same(q.tokenOut,addressOf(output)) && q.amountIn===amount && q.slippageBps===slippage);
+ requireThat(q.chainId===19480 && q.venue==='qwap' && same(q.router,ROUTER) && !q.cadinalFee && !q.cardinalFee && same(q.tokenIn,addressOf(input)) && same(q.tokenOut,addressOf(output)) && q.amountIn===amount && q.slippageBps===slippage);
  requireThat(Array.isArray(path) && path.length>=2 && path.length<=3 && same(path[0],pathAddress(input)) && same(path.at(-1),pathAddress(output)) && (path.length!==3 || same(path[1],WQMS)));
  requireThat(Array.isArray(pools) && pools.length===path.length-1);
  requireThat(uint(q.amountOut)>BigInt(0) && uint(q.minimumAmountOut)>BigInt(0) && uint(q.minimumAmountOut)===uint(q.amountOut)*BigInt(10000-slippage)/BigInt(10000));
@@ -32,7 +32,7 @@ export function requestFor(intent:Intent, wallet:string) {
  return {path:`/v1/liquidity/${intent.kind}/prepare`,body:{chainId:19480,venue:'qwap',tokenA:addressOf(intent.tokenA),tokenB:addressOf(intent.tokenB),slippageBps:intent.slippageBps,wallet,...(intent.kind==='add'?{amountADesired:intent.amountA,amountBDesired:intent.amountB}:{liquidity:intent.amountA})}};
 }
 export function validatePreparation(raw:unknown,intent:Intent,wallet:string):Review {
- const r=object(raw); requireThat(r.chainId===19480 && !r.cardinalFee);
+ const r=object(raw); requireThat(r.chainId===19480 && !r.cadinalFee && !r.cardinalFee);
  const account=getAddress(wallet), addresses:Address[]=[ROUTER];
  let pool:Review['pool'];
  const amounts=new Map<string,{amount:string;symbol:Token|'LP'}>();

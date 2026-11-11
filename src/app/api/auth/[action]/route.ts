@@ -13,7 +13,7 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{action:string
  try {
   const headers=new Headers({Origin:origin});
   // Forward only authentication cookies, never unrelated application cookies.
-  const cookies=(request.headers.get('cookie')??'').split(';').map(v=>v.trim()).filter(v=>/^(?:__Host-)?cardinal-(?:session|challenge)=/.test(v));
+  const cookies=(request.headers.get('cookie')??'').split(';').map(v=>v.trim()).filter(v=>/^(?:__Host-)?cadinal-(?:session|challenge)=/.test(v));
   if(cookies.length)headers.set('Cookie',cookies.join('; '));
   let body:string|undefined;
   if(request.method==='POST'){

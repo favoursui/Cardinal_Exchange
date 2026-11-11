@@ -20,11 +20,11 @@ export function displayBalance(amount:string,decimals:number):string {
  if(BigInt(amount)>BigInt(0)&&BigInt(whole)===BigInt(0)&&!short)return '<0.0001';
  return `${whole}${short?'.'+short:''}`;
 }
-export function useRouteQuote(input:Token,output:Token,amount:string,slippage:string,conversion:boolean) {
+export function useRouteQuote(input:Token,output:Token,amount:string,slippage:string,conversion:boolean,walletConnected:boolean) {
  const [result,setResult]=useState<{key:string;quotes:TradingQuote[];status:string}>();
  const [revision,setRevision]=useState(0);const [venue,setVenue]=useState('');
  const amountIn=baseUnits(amount,tokenMetadata[input].decimals),slippageBps=Math.round(Number(slippage)*100);
- const key=JSON.stringify([input,output,amountIn,slippageBps,conversion,revision]);const enabled=!conversion&&amountIn!==null;
+ const key=JSON.stringify([input,output,amountIn,slippageBps,conversion,revision,walletConnected]);const enabled=walletConnected&&!conversion&&amountIn!==null;
  useEffect(()=>{
   if(!enabled)return;
   const controller=new AbortController();
@@ -68,5 +68,5 @@ export function useRouteQuote(input:Token,output:Token,amount:string,slippage:st
  },[key,enabled,input,output,amountIn,slippageBps]);
  const current=enabled&&result?.key===key?result:undefined;const quotes=current?.quotes??[];
  const quote=quotes.find(q=>q.venue===venue)??quotes[0];
- return {quote,quotes,best:quote===quotes[0],select:setVenue,status:!enabled?'Awaiting quote':current?.status??'Finding route…',refresh:()=>setRevision(v=>v+1),enabled};
+ return {quote,quotes,best:quote===quotes[0],select:setVenue,status:!walletConnected?'Connect wallet for quotes':!enabled?'Awaiting quote':current?.status??'Finding route…',refresh:()=>setRevision(v=>v+1),enabled};
 }

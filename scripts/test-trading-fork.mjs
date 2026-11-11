@@ -5,8 +5,8 @@ import {resolve} from 'node:path';
 import {writeFile} from 'node:fs/promises';
 import {createPublicClient,defineChain,http,erc20Abi,getAddress} from 'viem';
 import {loadTS} from './load-ts.mjs';
-const backend=process.env.CARDINAL_BACKEND_DIR;
-if(!backend)throw new Error('Set CARDINAL_BACKEND_DIR to the built backend directory.');
+const backend=process.env.CADINAL_BACKEND_DIR;
+if(!backend)throw new Error('Set CADINAL_BACKEND_DIR to the built backend directory.');
 const backendModule=path=>import(pathToFileURL(resolve(backend,'dist/apps/api/src',path)).href);
 const {buildApp}=await backendModule('app.js');
 const {QwapQuotes,createQwapReader}=await backendModule('adapters/qwap.js');
@@ -66,6 +66,6 @@ try {
  const final=await quotes.pool(tokenMetadata.WQMS.address,tokenMetadata.USDC.address,account);assert.equal(final.position.lpBalance,'0');
  assert.ok(readHistory(memory,account).length>=runs.length);
  const evidence={checkedAt:new Date().toISOString(),sourceBlock:String(source.number),publicTransactions:false,runs,recordedHashes:readHistory(memory,account).length};
- await writeFile('/tmp/cardinal-trading-fork-evidence.json',JSON.stringify(evidence,null,2)+'\n');
+ await writeFile('/tmp/cadinal-trading-fork-evidence.json',JSON.stringify(evidence,null,2)+'\n');
  console.log('Trading fork passed:',JSON.stringify(evidence));
 } finally {await app?.close();assert.equal(await client.request({method:'evm_revert',params:[snapshot]}),true);}

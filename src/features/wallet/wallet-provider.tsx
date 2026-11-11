@@ -1,5 +1,6 @@
 "use client";
 
+import { AccountPanel } from './account-panel';
 import { WalletSignIn, signOutWallet } from './sign-in';
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { isProvider, QMS_CHAIN_ID, WalletController, type WalletOption, type WalletState } from './controller';
@@ -26,6 +27,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
   useEffect(() => {
+    if (state.account) dialog.current?.close();
+  }, [state.account]);
+  useEffect(() => {
     function announce(event: Event) {
       const detail = (event as CustomEvent).detail;
       if (!detail || !isProvider(detail.provider) || typeof detail.info?.uuid !== 'string' || detail.info.uuid.length > 80 ||
@@ -43,14 +47,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('eip6963:announceProvider', announce);
     window.addEventListener('ethereum#initialized', legacy);
-    window.addEventListener('cardinal:discover-wallets', legacy);
+    window.addEventListener('cadinal:discover-wallets', legacy);
     window.dispatchEvent(new Event('eip6963:requestProvider'));
     const timer = setTimeout(legacy, 200);
     return () => {
       clearTimeout(timer);
       window.removeEventListener('eip6963:announceProvider', announce);
       window.removeEventListener('ethereum#initialized', legacy);
-      window.removeEventListener('cardinal:discover-wallets', legacy);
+      window.removeEventListener('cadinal:discover-wallets', legacy);
       controller.disconnect();
     };
   }, [controller]);
@@ -58,7 +62,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setConfigError(null);
     window.dispatchEvent(new Event('eip6963:requestProvider'));
-    window.dispatchEvent(new Event('cardinal:discover-wallets'));
+    window.dispatchEvent(new Event('cadinal:discover-wallets'));
     if (!dialog.current?.open) dialog.current?.showModal();
   };
   const switchNetwork = () => {
@@ -68,7 +72,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const sendTransaction = async (tx: WalletTransaction) => {
     const hash = await controller.sendTransaction(tx);
     let historySaved = true;
-    try { saveTransaction(localStorage, tx.from, hash); window.dispatchEvent(new Event('cardinal:transaction')); }
+    try { saveTransaction(localStorage, tx.from, hash); window.dispatchEvent(new Event('cadinal:transaction')); }
     catch { historySaved = false; }
     return {hash, historySaved};
   };
@@ -83,25 +87,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const correctNetwork = state.chainId === QMS_CHAIN_ID;
   return <WalletContext.Provider value={{ ...state, correctNetwork, open, disconnect, verifyTransaction: controller.verifyTransaction, readRpc: controller.readRpc, sendTransaction }}>
     {children}
-    <dialog ref={dialog} className={styles.dialog} aria-labelledby="wallet-title" onClose={() => trigger.current?.focus()} onClick={event => {
+    <dialog ref={dialog} className={`${styles.dialog} ${state.account ? styles.connectedDialog : styles.connectDialog}`} aria-labelledby="wallet-title" onClose={() => trigger.current?.focus()} onClick={event => {
       if (event.target !== event.currentTarget) return;
       const rect = event.currentTarget.getBoundingClientRect();
       if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.current?.close();
     }}>
-      <div className={styles.header}><h2 id="wallet-title">{state.account ? 'Your wallet' : 'Connect wallet'}</h2><button type="button" aria-label="Close wallet dialog" onClick={() => dialog.current?.close()}>×</button></div>
-      <div className={styles.body}>
-        {state.account ? <>
-          <p className={styles.name}>{state.name}</p>
-          <p className={styles.address}>{state.account}</p>
-          <p role="status">{correctNetwork ? 'Connected to QMS Testnet' : 'Switch to QMS Testnet to continue.'}</p>
-          {!correctNetwork && <button type="button" className={styles.primary} disabled={state.busy} onClick={switchNetwork}>Switch to QMS Testnet</button>}
+      {!state.account&&<div className={styles.header}><h2 id="wallet-title">Connect a Wallet</h2><button type="button" aria-label="Close wallet dialog" onClick={()=>dialog.current?.close()}>×</button></div>}
+      <div className={state.account ? styles.connectedBody : styles.body}>
+        {state.account ? <AccountPanel key={state.account} account={state.account} correctNetwork={correctNetwork} busy={state.busy} onDisconnect={disconnect} onClose={()=>dialog.current?.close()} onSwitch={switchNetwork}>
           <WalletSignIn key={`${state.account}:${state.chainId}`} account={state.account} correctNetwork={correctNetwork} controller={controller} walletBusy={state.busy} />
-          <button type="button" className={styles.secondary} onClick={disconnect}>Disconnect</button>
-          <p className={styles.hint}>Disconnect ends your sign-in session and removes this app’s wallet connection.</p>
-        </> : <>
-          <p>Choose a wallet available in this browser.</p>
-          {wallets.length ? <ul className={styles.list}>{wallets.map(wallet => <li key={wallet.id}><button type="button" disabled={state.busy} onClick={() => { setConfigError(null); void controller.connect(wallet); }}><WalletLogo source={wallet.icon} /><span>{wallet.name}</span><span aria-hidden="true">›</span></button></li>)}</ul> : <p className={styles.empty}>No browser wallet detected. Enable your wallet extension, or open Cardinal in your wallet’s built-in browser.</p>}
-          {state.busy && <button type="button" className={styles.secondary} onClick={controller.disconnect}>Cancel connection</button>}
+        </AccountPanel> : <>
+          <div className={styles.connectLayout}>
+            <section className={styles.walletChoices} aria-label="Available wallets">
+              <p className={styles.sectionLabel}>Detected wallets</p>
+              {wallets.length ? <ul className={styles.list}>{wallets.map(wallet => <li key={wallet.id}><button type="button" disabled={state.busy} onClick={() => { setConfigError(null); void controller.connect(wallet); }}><WalletLogo source={wallet.icon} /><span>{wallet.name}</span></button></li>)}</ul> : <p className={styles.empty}>No compatible wallet detected. Enable an Ethereum-compatible wallet extension, or open Cadinal in your wallet’s built-in browser.</p>}
+              {state.busy && <button type="button" className={styles.secondary} onClick={controller.disconnect}>Cancel connection</button>}
+            </section>
+          </div>
         </>}
         {state.busy && <p role="status">Confirm the request in your wallet.</p>}
         {(state.error || configError) && <p role="alert" className={styles.error}>{configError || state.error}</p>}

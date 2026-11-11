@@ -12,6 +12,7 @@ import { TokenLogo } from "@/components/ui/token-logo";
 import { tokens, tokenMetadata, type Token } from "@/lib/config/tokens";
 import { baseUnits, displayUnits, displayBalance, useRouteQuote } from "./use-route-quote";
 import styles from "./exchange-card.module.css";
+import { useNetworkGasPrice } from "./use-network-fee";
 
 type IconName = "history" | "settings" | "refresh" | "switch" | "gas" | "wallet";
 
@@ -93,6 +94,7 @@ export function ExchangeCard() {
   const balanceState = useBalances(wallet.account);
   const capabilities = useCapabilities();
   const [maxError, setMaxError] = useState("");
+  const [switchRotation, setSwitchRotation] = useState(0);
   const [gasBudget, setGasBudget] = useState<{key:string;amount:string;approval:boolean}>();
   const [openRoutesKey, setOpenRoutesKey] = useState<string | null>(null);
   const [inputToken, setInputToken] = useState<Token>("QMS");
@@ -106,7 +108,7 @@ export function ExchangeCard() {
   const conversion = inputToken === "QMS" && outputToken === "WQMS" ? "Wrap" : inputToken === "WQMS" && outputToken === "QMS" ? "Unwrap" : null;
   const conversionAmount = /^\d+(?:\.\d{1,18})?$/.test(amount) ? amount : "0.00";
 
-  const route = useRouteQuote(inputToken, outputToken, amount, slippage, !!conversion);
+  const route = useRouteQuote(inputToken, outputToken, amount, slippage, !!conversion, !!wallet.account);
   const routesKey = JSON.stringify([wallet.account, wallet.chainId, route.quotes.map(quote => quote.quoteId)]);
   const routesOpen = route.quotes.length > 0 && openRoutesKey === routesKey;
   const routeName = route.quote?.venueName ?? "Awaiting quote";
@@ -117,6 +119,10 @@ export function ExchangeCard() {
   const intent: Intent | null = conversion && amountIn ? {kind: conversion === "Wrap" ? "wrap" : "unwrap", amount: amountIn} : route.quote ? {kind: "swap", quote: route.quote} : null;
   const feeKey = JSON.stringify([wallet.account, wallet.chainId, intent]);
   const currentGas = gasBudget?.key === feeKey ? gasBudget : undefined;
+  const gasPrice = useNetworkGasPrice();
+  const networkFeeLabel = gasPrice !== undefined
+    ? `${Number(gasPrice) < 0.01 ? "<0.01" : Number(gasPrice).toFixed(2)} Gwei`
+    : "Unavailable";
   const resetAfterSuccess = (submitted: Intent) => {
     const unchanged = submitted.kind === "swap"
       ? submitted.quote.tokenIn === inputToken && submitted.quote.tokenOut === outputToken && submitted.quote.amountIn === amountIn
@@ -174,7 +180,7 @@ export function ExchangeCard() {
         </div>
 
         <div className={styles.switchDivider}>
-          <button type="button" className={styles.switchButton} aria-label="Reverse token pair" onClick={() => { setInputToken(outputToken); setOutputToken(inputToken); setAmount(""); }}><Icon name="switch" /></button>
+          <button type="button" className={styles.switchButton} aria-label="Reverse token pair" onClick={() => { setSwitchRotation(rotation => rotation + 180); setInputToken(outputToken); setOutputToken(inputToken); setAmount(""); }}><span className={styles.switchIcon} style={{ transform: `rotate(${switchRotation}deg)` }}><Icon name="switch" /></span></button>
         </div>
 
         <div className={styles.amountPanel}>
@@ -190,8 +196,8 @@ export function ExchangeCard() {
 
       <div className={styles.gasRow}>
         <span className={styles.gasIcon}><Icon name="gas" /></span>
-        <div><span>Network fee</span><p>{inputToken === "QMS" ? "Keep some QMS available for gas" : "Paid in native QMS"}</p></div>
-        <span className={styles.gasValue}>{currentGas ? `${currentGas.amount} QMS` : "On preparation"}</span>
+        <div><span>Gas price</span></div>
+        <span className={styles.gasValue} title="Current network price per unit of gas, in Gwei. Not the total transaction fee.">{networkFeeLabel}</span>
       </div>
 
       {conversion ? <div className={styles.routeSection}>
@@ -205,9 +211,8 @@ export function ExchangeCard() {
         <div className={styles.routeCard}>
           {route.quote && route.best && <span className={styles.bestReturnTag}>Best Return</span>}
           <div className={styles.routeSummary}><strong>{route.quote ? routeName : "Find your best route"}</strong><span>{route.quote ? estimatedOutput : "—"} {outputToken}</span></div>
-          <div className={styles.routeDetails}><span>{currentGas ? `${currentGas.approval ? "Approval gas budget" : "Gas budget"}: ${currentGas.amount} QMS` : "Gas: calculated on preparation"}</span><span>After swap fees</span></div>
-          <p className={styles.routeTiming}>Confirmation: 3 blocks · time varies</p>
-          {route.quote && <p>Minimum receive: {displayUnits(route.quote.minimumAmountOut, tokenMetadata[outputToken].decimals)} {outputToken} · Gas paid separately</p>}
+          <div className={styles.routeDetails}><span>{currentGas ? `${currentGas.approval ? "Approval gas budget" : "Gas budget"}: ${Number(currentGas.amount) < 0.01 ? "< 0.01" : currentGas.amount} QMS` : "Gas budget: —"}</span></div>
+          {route.quote && <p>Minimum receive: {displayUnits(route.quote.minimumAmountOut, tokenMetadata[outputToken].decimals)} {outputToken}</p>}
           <div className={styles.routePath} aria-label={`${inputToken} through ${routeName} to ${outputToken}`}>
             <span className={styles.routeToken}><TokenMark token={inputToken} />{inputToken}</span>
             <span aria-hidden="true" className={styles.arrow}>⟶</span>
@@ -223,7 +228,6 @@ export function ExchangeCard() {
       {maxError && <p role="alert">{maxError}</p>}
       {capabilities.error && <p role="alert">{capabilities.error}</p>}
       {capabilities.ready && !capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation") && <p className={styles.notice}>Preparation is disabled on the API.</p>}
-      {inputToken === "QMS" && <p className={styles.notice}>MAX reserves a conservative gas budget. Unused gas stays in your wallet.</p>}
       <ReviewButton inline onSuccess={resetAfterSuccess} onPrepared={(review, preparedIntent) => { const tx = review.transaction; setGasBudget(tx.gas && tx.gasPrice ? {key: JSON.stringify([wallet.account, wallet.chainId, preparedIntent]), amount: displayUnits((BigInt(tx.gas) * BigInt(tx.gasPrice)).toString(), 18), approval: review.approval} : undefined); }} key={`${wallet.account}:${wallet.chainId}`} intent={intent} enabled={capabilities.enabled(conversion ? "nativeWrapping" : "swapPreparation")} label={conversion ? `Review ${conversion.toLowerCase()}` : "Review swap"} onComplete={complete} />
 
       <dialog ref={history} className={`${styles.settingsDialog} ${styles.historyDialog}`} aria-labelledby="history-title" onClose={() => { setHistoryOpen(false); historyButton.current?.focus(); }} onClick={event => {

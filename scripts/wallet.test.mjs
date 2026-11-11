@@ -121,7 +121,7 @@ test('history import rejects account changes during lookup', async () => {
 test('sign-in signs a message only on explicit request and never submits a transaction',async()=>{
  const c=new WalletController(),p=new Provider();await c.connect(option(p));
  p.handlers.personal_sign=()=>`0x${'ab'.repeat(65)}`;
- const message='Sign in to Cardinal Exchange';
+ const message='Sign in to Cadinal Exchange';
  assert.equal(await c.signInMessage(message),`0x${'ab'.repeat(65)}`);
  const call=p.calls.find(c=>c.method==='personal_sign');assert.equal(call.params[1],address);
  assert.equal(Buffer.from(call.params[0].slice(2),'hex').toString(),message);

@@ -5,10 +5,12 @@ export type HistoryRecord = { hash: string; addedAt: string };
 export interface HistoryStorage { getItem(key: string): string | null; setItem(key: string, value: string): void }
 function key(account: string) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(account)) throw new Error('Invalid account');
-  return `cardinal:transactions:v1:${HISTORY_CHAIN_ID}:${account.toLowerCase()}`;
+  return `cadinal:transactions:v1:${HISTORY_CHAIN_ID}:${account.toLowerCase()}`;
 }
 export function readHistory(storage: HistoryStorage, account: string): HistoryRecord[] {
-  const raw = storage.getItem(key(account));
+  const currentKey = key(account);
+  // Read legacy browser history until the next save writes the corrected key.
+  const raw = storage.getItem(currentKey) ?? storage.getItem(currentKey.replace("cadinal:", "cardinal:"));
   if (!raw) return [];
   if (raw.length > 20_000) throw new Error('Invalid saved history');
   const value: unknown = JSON.parse(raw);

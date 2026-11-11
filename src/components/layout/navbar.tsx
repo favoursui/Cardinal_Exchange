@@ -1,6 +1,6 @@
 "use client";
 
-import { useTradingSettings } from "@/features/trading/settings";
+import { ThemeToggle } from "./theme-toggle";
 import { useWallet, shortAddress } from "@/features/wallet/wallet-provider";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -12,7 +12,7 @@ function Chevron() {
   return <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function CardinalMark() {
+function CadinalMark() {
   return (
     <svg aria-hidden="true" width="34" height="34" viewBox="0 0 36 36" fill="none">
       <circle cx="18" cy="18" r="17" fill="currentColor" />
@@ -24,7 +24,6 @@ function CardinalMark() {
 
 export function Navbar() {
   const wallet = useWallet();
-  const settings = useTradingSettings();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigation = useRef<HTMLElement>(null);
@@ -51,9 +50,9 @@ export function Navbar() {
   return (
     <header className="exchange-header">
       <nav ref={navigation} aria-label="Main navigation" className="exchange-nav">
-        <Link href="/" aria-label="Cardinal Exchange home" className="brand" onClick={() => setMenuOpen(false)}>
-          <span className="brand-mark"><CardinalMark /></span>
-          <span className="brand-name">Cardinal</span>
+        <Link href="/" aria-label="Cadinal Exchange home" className="brand" onClick={() => setMenuOpen(false)}>
+          <span className="brand-mark"><CadinalMark /></span>
+          <span className="brand-name">Cadinal</span>
         </Link>
 
         <div id="primary-navigation-links" className="nav-links" data-open={menuOpen}>
@@ -64,7 +63,6 @@ export function Navbar() {
               <Link href="/liquidity" aria-current={pathname === "/liquidity" ? "page" : undefined} onClick={() => setMenuOpen(false)}>Liquidity <span aria-hidden="true">↗</span></Link>
             </div>
           </details>
-          <button className="nav-link" disabled title="Coming soon">Cardinal AI</button>
           <button className="nav-link" disabled title="Coming soon">Profile</button>
         </div>
 
@@ -72,12 +70,7 @@ export function Navbar() {
           <span className="network-pill" title="QMS testnet">
             <TokenLogo symbol="QMS" className="network-mark" />
           </span>
-          <button type="button" className="settings-button" onClick={settings.open} aria-label="Trading settings" aria-haspopup="dialog" title="Trading settings">
-            <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m9.5 3-.6 2.3-1.8 1-2.3-.6-2 3.5 1.7 1.7v2.2l-1.7 1.7 2 3.5 2.3-.6 1.8 1 .6 2.3h4.9l.6-2.3 1.8-1 2.3.6 2-3.5-1.7-1.7v-2.2l1.7-1.7-2-3.5-2.3.6-1.8-1-.6-2.3Z" />
-              <circle cx="12" cy="12" r="3.2" />
-            </svg>
-          </button>
+          <ThemeToggle />
           <button type="button" className="wallet-button" onClick={() => { setMenuOpen(false); wallet.open(); }} aria-haspopup="dialog" title={wallet.account ?? "Connect wallet"}>
             {wallet.account ? <AccountIdenticon address={wallet.account} /> : (<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 8V5a2 2 0 0 0-2-2L5 6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h15V8H5a2 2 0 0 1 0-4" /><path d="M20 12h-5v5h5" /><path d="M17 14.5h.01" /></svg>)}
             <span>{wallet.account ? shortAddress(wallet.account) : wallet.busy ? "Connecting…" : "Connect wallet"}</span>

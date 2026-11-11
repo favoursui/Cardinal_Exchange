@@ -28,8 +28,8 @@ export function TransactionHistory({ onConnect }: { onConnect: () => void }) {
     };
     const timer = setTimeout(load, 0);
     window.addEventListener('storage', load);
-    window.addEventListener('cardinal:transaction', load);
-    return () => { alive.current = false; clearTimeout(timer); window.removeEventListener('storage', load); window.removeEventListener('cardinal:transaction', load); };
+    window.addEventListener('cadinal:transaction', load);
+    return () => { alive.current = false; clearTimeout(timer); window.removeEventListener('storage', load); window.removeEventListener('cadinal:transaction', load); };
   }, [account]);
   useEffect(() => {
     if (!account || !records.length) return;

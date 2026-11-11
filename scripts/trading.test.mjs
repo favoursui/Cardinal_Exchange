@@ -25,7 +25,7 @@ test('swap validator binds native and ERC20 payloads to the reviewed intent',()=
 });
 test('tampered destination, recipient, calldata, value, minima, route, chain and expiry fail closed',()=>{
  const {intent,response}=swap();
- const changes=[r=>r.transaction.to=other,r=>r.recipient=other,r=>r.transaction.data='0x',r=>r.transaction.value='1',r=>r.minimumAmountOut='1',r=>r.path=[other,usdc],r=>r.chainId=1,r=>r.expiresAt=new Date(0).toISOString(),r=>r.transaction.from=other,r=>r.cardinalFee={}];
+ const changes=[r=>r.transaction.to=other,r=>r.recipient=other,r=>r.transaction.data='0x',r=>r.transaction.value='1',r=>r.minimumAmountOut='1',r=>r.path=[other,usdc],r=>r.chainId=1,r=>r.expiresAt=new Date(0).toISOString(),r=>r.transaction.from=other,r=>r.cadinalFee={}];
  for(const change of changes){const altered=structuredClone(response);change(altered);assert.throws(()=>validatePreparation(altered,intent,account));}
 });
 test('approvals bind exact amount and router; reset is a separate zero approval',()=>{
