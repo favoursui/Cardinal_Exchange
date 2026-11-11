@@ -80,7 +80,7 @@ export function Navbar() {
           </button>
           <button type="button" className="wallet-button" onClick={() => { setMenuOpen(false); wallet.open(); }} aria-haspopup="dialog" title={wallet.account ?? "Connect wallet"}>
             {wallet.account ? <AccountIdenticon address={wallet.account} /> : (<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 8V5a2 2 0 0 0-2-2L5 6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h15V8H5a2 2 0 0 1 0-4" /><path d="M20 12h-5v5h5" /><path d="M17 14.5h.01" /></svg>)}
-            <span>{wallet.busy ? "Connecting…" : wallet.account ? shortAddress(wallet.account) : "Connect wallet"}</span>
+            <span>{wallet.account ? shortAddress(wallet.account) : wallet.busy ? "Connecting…" : "Connect wallet"}</span>
             <Chevron />
           </button>
           <button ref={menuButton} type="button" className="mobile-menu-button" aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls="primary-navigation-links" onClick={() => setMenuOpen(open => !open)}>
