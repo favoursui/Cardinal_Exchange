@@ -5,21 +5,12 @@ import { useWallet, shortAddress } from "@/features/wallet/wallet-provider";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { AccountIdenticon } from "@/components/ui/account-identicon";
 import { TokenLogo } from "@/components/ui/token-logo";
 
 function Chevron() {
   return <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
-function CadinalMark() {
-  return (
-    <svg aria-hidden="true" width="34" height="34" viewBox="0 0 36 36" fill="none">
-      <circle cx="18" cy="18" r="17" fill="currentColor" />
-      <path d="m10 27 2-11 5-4 2-7 4 7 5 4-6 2-2 9-4-6-6 6Z" fill="#111214" />
-      <circle cx="21" cy="14" r="1.2" fill="currentColor" />
-    </svg>
-  );
 }
 
 export function Navbar() {
@@ -51,7 +42,7 @@ export function Navbar() {
     <header className="exchange-header">
       <nav ref={navigation} aria-label="Main navigation" className="exchange-nav">
         <Link href="/" aria-label="Cadinal Exchange home" className="brand" onClick={() => setMenuOpen(false)}>
-          <span className="brand-mark"><CadinalMark /></span>
+          <span className="brand-mark"><Image src="/images/cadinal.svg" alt="" width={34} height={34} /></span>
           <span className="brand-name">Cadinal</span>
         </Link>
 

@@ -116,7 +116,7 @@ export function ExchangeCard() {
 
   const inputBalance = balanceState.balances[inputToken], outputBalance = balanceState.balances[outputToken];
   const amountIn = baseUnits(amount, tokenMetadata[inputToken].decimals);
-  const intent: Intent | null = conversion && amountIn ? {kind: conversion === "Wrap" ? "wrap" : "unwrap", amount: amountIn} : route.quote ? {kind: "swap", quote: route.quote} : null;
+  const intent: Intent | null = conversion && amountIn ? {kind: conversion === "Wrap" ? "wrap" : "unwrap", amount: amountIn} : route.quote ? {kind: "swap", quote: route.quote, deadlineSeconds: settings.deadlineMinutes * 60} : null;
   const feeKey = JSON.stringify([wallet.account, wallet.chainId, intent]);
   const currentGas = gasBudget?.key === feeKey ? gasBudget : undefined;
   const gasPrice = useNetworkGasPrice();

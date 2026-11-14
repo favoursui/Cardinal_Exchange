@@ -3,6 +3,7 @@ import { tokenMetadata, type Token } from '@/lib/config/tokens';
 import type { WalletTransaction } from '@/features/wallet/controller';
 import { abi, ROUTER, WQMS, NATIVE } from './contracts';
 import { object, text, uint } from './api';
+import { liquidityContracts, type LiquidityVenue } from './liquidity-contracts';
 export const same = (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 export const addr = (value: unknown): Address => getAddress(text(value));
 export const hex = (value: bigint) => `0x${value.toString(16)}`;
@@ -20,20 +21,21 @@ export function parseQuote(value: unknown, input: Token, output: Token, amount: 
  const expires=Date.parse(text(q.expiresAt)); requireThat(expires>Date.now() && expires<=Date.now()+15_000);
  return {quoteId:text(q.quoteId),venue:'qwap',venueName:text(q.venueName),amountOut:text(q.amountOut),minimumAmountOut:text(q.minimumAmountOut),expiresAt:text(q.expiresAt),path:path.map(addr),pools:pools.map(addr),tokenIn:input,tokenOut:output,amountIn:amount,slippageBps:slippage};
 }
-export type Intent = {kind:'swap';quote:TradingQuote} | {kind:'wrap';amount:string} | {kind:'unwrap';amount:string} | {kind:'add'|'remove';tokenA:Token;tokenB:Token;amountA:string;amountB:string;slippageBps:number;pool:Address};
+export type Intent = {kind:'swap';quote:TradingQuote;deadlineSeconds?:number} | {kind:'wrap';amount:string} | {kind:'unwrap';amount:string} | {kind:'add'|'remove';venue?:LiquidityVenue;tokenA:Token;tokenB:Token;amountA:string;amountB:string;slippageBps:number;pool:Address};
 export type Review = {transaction:WalletTransaction;title:string;lines:string[];approval:boolean;addresses:Address[];pool?:{address:Address;tokenA:Address;tokenB:Address}};
 function quantity(value: string, token:Token) {
  const decimals=tokenMetadata[token].decimals, padded=value.padStart(decimals+1,'0');
  const fraction=padded.slice(-decimals).replace(/0+$/,''); return `${padded.slice(0,-decimals)}${fraction?'.'+fraction:''} ${token}`;
 }
 export function requestFor(intent:Intent, wallet:string) {
- if(intent.kind==='swap')return {path:'/v1/transactions/prepare',body:{quoteId:intent.quote.quoteId,wallet}};
+ if(intent.kind==='swap')return {path:'/v1/transactions/prepare',body:{quoteId:intent.quote.quoteId,wallet,deadlineSeconds:intent.deadlineSeconds??120}};
  if(intent.kind==='wrap'||intent.kind==='unwrap')return {path:'/v1/native/prepare',body:{chainId:19480,operation:intent.kind,amount:intent.amount,wallet}};
- return {path:`/v1/liquidity/${intent.kind}/prepare`,body:{chainId:19480,venue:'qwap',tokenA:addressOf(intent.tokenA),tokenB:addressOf(intent.tokenB),slippageBps:intent.slippageBps,wallet,...(intent.kind==='add'?{amountADesired:intent.amountA,amountBDesired:intent.amountB}:{liquidity:intent.amountA})}};
+ return {path:`/v1/liquidity/${intent.kind}/prepare`,body:{chainId:19480,venue:intent.venue??'qwap',tokenA:addressOf(intent.tokenA),tokenB:addressOf(intent.tokenB),slippageBps:intent.slippageBps,wallet,...(intent.kind==='add'?{amountADesired:intent.amountA,amountBDesired:intent.amountB}:{liquidity:intent.amountA})}};
 }
 export function validatePreparation(raw:unknown,intent:Intent,wallet:string):Review {
  const r=object(raw); requireThat(r.chainId===19480 && !r.cadinalFee && !r.cardinalFee);
- const account=getAddress(wallet), addresses:Address[]=[ROUTER];
+ const router=intent.kind==='add'||intent.kind==='remove'?liquidityContracts(intent.venue??'qwap').router:ROUTER;
+ const account=getAddress(wallet), addresses:Address[]=[router];
  let pool:Review['pool'];
  const amounts=new Map<string,{amount:string;symbol:Token|'LP'}>();
  if(intent.kind==='swap') {
@@ -42,7 +44,7 @@ export function validatePreparation(raw:unknown,intent:Intent,wallet:string):Rev
   if(intent.quote.tokenIn!=='QMS')amounts.set(addressOf(intent.quote.tokenIn).toLowerCase(),{amount:intent.quote.amountIn,symbol:intent.quote.tokenIn});
  } else if(intent.kind==='wrap'||intent.kind==='unwrap') { addresses.splice(0,1,WQMS); }
  else {
-  requireThat(r.venue==='qwap' && intent.tokenA!=='QMS' && intent.tokenB!=='QMS' && intent.tokenA!==intent.tokenB);
+  requireThat(r.venue===(intent.venue??'qwap') && intent.tokenA!=='QMS' && intent.tokenB!=='QMS' && intent.tokenA!==intent.tokenB);
   const tokenA=addr(addressOf(intent.tokenA)),tokenB=addr(addressOf(intent.tokenB)); addresses.push(tokenA,tokenB);
   pool={address:intent.pool,tokenA,tokenB};
   if(intent.kind==='add'){amounts.set(tokenA.toLowerCase(),{amount:intent.amountA,symbol:intent.tokenA});amounts.set(tokenB.toLowerCase(),{amount:intent.amountB,symbol:intent.tokenB});}
@@ -53,24 +55,28 @@ export function validatePreparation(raw:unknown,intent:Intent,wallet:string):Rev
   const approvals=Array.isArray(r.approvals)?r.approvals:[r]; requireThat(approvals.length>0 && approvals.length<=amounts.size);
   for(const item of approvals) {
    const a=object(item), allowed=amounts.get(addr(a.token).toLowerCase());
-   requireThat(allowed && same(a.owner,account) && same(a.spender,ROUTER) && a.amount===allowed.amount && uint(a.currentAllowance)<uint(a.amount) && a.resetAllowanceFirst===(uint(a.currentAllowance)>BigInt(0)));
+   requireThat(allowed && same(a.owner,account) && same(a.spender,router) && a.amount===allowed.amount && uint(a.currentAllowance)<uint(a.amount) && a.resetAllowanceFirst===(uint(a.currentAllowance)>BigInt(0)));
   }
   const a=object(approvals[0]), token=addr(a.token), allowed=amounts.get(token.toLowerCase())!;
   const reset=a.resetAllowanceFirst===true, amount=reset?BigInt(0):uint(a.amount);
   const label=allowed.symbol==='LP'?`${amount} LP base units`:quantity(amount.toString(),allowed.symbol);
-  return {approval:true,title:reset?'Reset token allowance':'Approve token spending',lines:[`${reset?'Reset to':'Approve exactly'} ${label}`,`Spender: ${ROUTER}`,'Wait for confirmation, then prepare again.'],addresses,pool,
-   transaction:{from:account,to:token,data:encodeFunctionData({abi,functionName:'approve',args:[ROUTER,amount]}),value:'0x0',chainId:'0x4c18',expiresAt:Date.now()+60_000}};
+  return {approval:true,title:reset?'Reset token allowance':'Approve token spending',lines:[`${reset?'Reset to':'Approve exactly'} ${label}`,`Spender: ${router}`,'Wait for confirmation, then prepare again.'],addresses,pool,
+   transaction:{from:account,to:token,data:encodeFunctionData({abi,functionName:'approve',args:[router,amount]}),value:'0x0',chainId:'0x4c18',expiresAt:Date.now()+60_000}};
  }
  requireThat(r.status==='prepared' && same(r.recipient,account));
  const expires=Date.parse(text(r.expiresAt));requireThat(expires>Date.now() && expires<=Date.now()+15_000);
- let data:Hex, target:Address=ROUTER, value=BigInt(0),title='Review swap';const lines:string[]=[];
+ let data:Hex, target:Address=router, value=BigInt(0),title='Review swap';const lines:string[]=[];
  if(intent.kind==='wrap'||intent.kind==='unwrap') {
   target=WQMS;value=intent.kind==='wrap'?uint(intent.amount):BigInt(0);
   requireThat(r.operation===intent.kind && r.amountIn===intent.amount && r.amountOut===intent.amount && same(r.tokenIn,intent.kind==='wrap'?NATIVE:WQMS) && same(r.tokenOut,intent.kind==='wrap'?WQMS:NATIVE));
   data=intent.kind==='wrap'?encodeFunctionData({abi,functionName:'deposit'}):encodeFunctionData({abi,functionName:'withdraw',args:[uint(intent.amount)]});
   title=intent.kind==='wrap'?'Wrap QMS':'Unwrap WQMS';lines.push(quantity(intent.amount,intent.kind==='wrap'?'QMS':'WQMS'),'1:1 conversion. No swap fee. Network gas applies.','Wrapper transactions have no on-chain deadline.');
  } else {
-  const deadline=uint(r.deadline);requireThat(deadline>BigInt(Math.floor(Date.now()/1000)) && deadline<=BigInt(Math.floor(Date.now()/1000)+125));
+  const duration=intent.kind==='swap'?(intent.deadlineSeconds??120):120;
+  requireThat(Number.isInteger(duration)&&duration>=60&&duration<=1800);
+  const nowSeconds=Math.floor(Date.now()/1000);
+  const deadline=uint(r.deadline);requireThat(deadline>BigInt(nowSeconds) && deadline<=BigInt(nowSeconds+duration+5));
+  if(intent.kind==='swap')requireThat(deadline>=BigInt(nowSeconds+duration-35));
   if(intent.kind==='swap') {
    const q=intent.quote;requireThat(r.amountIn===q.amountIn && uint(r.minimumAmountOut)>=uint(q.minimumAmountOut) && uint(r.quotedAmountOut)>=uint(r.minimumAmountOut));
    requireThat(Array.isArray(r.path) && r.path.length===q.path.length && r.path.every((v,i)=>same(v,q.path[i])) && Array.isArray(r.pools) && r.pools.length===q.pools.length && r.pools.every((v,i)=>same(v,q.pools[i])));
@@ -91,6 +97,11 @@ export function validatePreparation(raw:unknown,intent:Intent,wallet:string):Rev
     data=encodeFunctionData({abi,functionName:'addLiquidity',args:[token0,token1,desired0,desired1,min0,min1,account,deadline]});title='Add liquidity';
     lines.push(`Maximum ${quantity(desired0.toString(),symbols[0])}`,`Maximum ${quantity(desired1.toString(),symbols[1])}`,`Expected deposit ${quantity(expected0.toString(),symbols[0])} + ${quantity(expected1.toString(),symbols[1])}`,'Minimum minted LP shares are not enforced by this router.');
    } else {
+    requireThat(Number.isInteger(intent.slippageBps)&&intent.slippageBps>=0&&intent.slippageBps<=10000);
+    // Removal estimates come from simulation and can differ from reserve shares.
+    // Accept stricter minima, but never more slippage than the selected tolerance.
+    const retained=BigInt(10000-intent.slippageBps);
+    requireThat(min0>=expected0*retained/BigInt(10000)&&min1>=expected1*retained/BigInt(10000));
     requireThat(r.liquidity===intent.amountA);data=encodeFunctionData({abi,functionName:'removeLiquidity',args:[token0,token1,uint(intent.amountA),min0,min1,account,deadline]});title='Remove liquidity';
     lines.push(`Burn ${intent.amountA} LP base units`);
    }

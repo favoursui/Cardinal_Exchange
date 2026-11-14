@@ -13,7 +13,8 @@
     "test:history": "node --test scripts/history.test.mjs",
     "test:trading": "node --test scripts/trading.test.mjs",
     "test:trading-fork": "node scripts/test-trading-fork.mjs",
-    "test:auth": "node --test scripts/auth-proxy.test.mjs"
+    "test:auth": "node --test scripts/auth-proxy.test.mjs",
+    "test:liquidity": "node --test scripts/liquidity.test.mjs"
   },
   "dependencies": {
     "next": "16.4.4",

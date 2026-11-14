@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {encodeFunctionData,decodeFunctionData} from 'viem';
 import {loadTS} from './load-ts.mjs';
-const {parseQuote,validatePreparation}=loadTS('src/features/trading/validation.ts');
+const {parseQuote,validatePreparation,requestFor}=loadTS('src/features/trading/validation.ts');
 const {abi,ROUTER,WQMS,NATIVE}=loadTS('src/features/trading/contracts.ts');
 const {tokenMetadata}=loadTS('src/lib/config/tokens.ts');
 const {WalletController}=loadTS('src/features/wallet/controller.ts');
@@ -12,8 +12,8 @@ const fresh=()=>new Date(Date.now()+14_000).toISOString();
 function quote(input='WQMS',output='USDC') {
  return parseQuote({chainId:19480,venue:'qwap',venueName:'QWAP',router:ROUTER,tokenIn:tokenMetadata[input].address,tokenOut:tokenMetadata[output].address,amountIn:'1000',amountOut:'2000',minimumAmountOut:'1990',slippageBps:50,path:[input==='QMS'?WQMS:tokenMetadata[input].address,output==='QMS'?WQMS:tokenMetadata[output].address],pools:[pool],quoteId:'11111111-1111-4111-8111-111111111111',expiresAt:fresh()},input,output,'1000',50);
 }
-function swap(input='WQMS',output='USDC') {
- const q=quote(input,output),deadline=BigInt(Math.floor(Date.now()/1000)+120);
+function swap(input='WQMS',output='USDC',seconds=120) {
+ const q=quote(input,output),deadline=BigInt(Math.floor(Date.now()/1000)+seconds);
  const data=input==='QMS'?encodeFunctionData({abi,functionName:'swapExactETHForTokens',args:[1990n,q.path,account,deadline]}):encodeFunctionData({abi,functionName:output==='QMS'?'swapExactTokensForETH':'swapExactTokensForTokens',args:[1000n,1990n,q.path,account,deadline]});
  return {intent:{kind:'swap',quote:q},response:{status:'prepared',chainId:19480,venue:'qwap',quoteId:q.quoteId,recipient:account,amountIn:'1000',minimumAmountOut:'1990',quotedAmountOut:'2000',path:q.path,pools:q.pools,deadline:String(deadline),expiresAt:fresh(),transaction:{chainId:19480,from:account,to:ROUTER,data,value:input==='QMS'?'1000':'0',gas:'200000'}}};
 }
@@ -67,4 +67,16 @@ test('wrong chain/account, expired review, or insufficient native gas prevents s
  for(const alter of [(p)=>p.chain='0x1',(p)=>p.account=other,(p,tx)=>tx.expiresAt=0,(p)=>p.balance='0x0']) {
   const {c,p}=await connected(),tx=transaction();alter(p,tx);await assert.rejects(c.sendTransaction(tx));assert.equal(p.calls.some(c=>c.method==='eth_sendTransaction'),false);
  }
+});
+
+test('swap deadlines follow the selected duration and reject mismatched preparation',()=>{
+ for(const seconds of [60,120,1800]) {
+  const {intent,response}=swap('WQMS','USDC',seconds);
+  intent.deadlineSeconds=seconds;
+  assert.equal(requestFor(intent,account).body.deadlineSeconds,seconds);
+  assert.equal(validatePreparation(response,intent,account).approval,false);
+  assert.throws(()=>validatePreparation(response,{...intent,deadlineSeconds:seconds===60?1800:60},account));
+ }
+ assert.equal(requestFor(swap().intent,account).body.deadlineSeconds,120);
+ for(const seconds of [59,1801,120.5])assert.throws(()=>validatePreparation(swap().response,{...swap().intent,deadlineSeconds:seconds},account));
 });

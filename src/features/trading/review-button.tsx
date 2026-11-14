@@ -7,27 +7,30 @@ import {qmsWalletChain} from '@/features/wallet/network';
 import {api} from './api';
 import {parseStatus,statusLabels,type TransactionStatus} from '@/features/history/store';
 import {abi,codeHashes,FACTORY} from './contracts';
+import {liquidityContracts} from './liquidity-contracts';
 import {addr,requestFor,same,validatePreparation,type Intent,type Review} from './validation';
 import styles from './trading.module.css';
 
 async function verifyContracts(intent:Intent,read:ReturnType<typeof useWallet>['readRpc']) {
+ const liquidity=intent.kind==='add'||intent.kind==='remove'?liquidityContracts(intent.venue??'qwap'):undefined;
+ const hashes=liquidity?.hashes??codeHashes;
  const addresses=intent.kind==='swap'?intent.quote.path:intent.kind==='wrap'||intent.kind==='unwrap'?[]:[];
  // Validate all pinned contract runtimes, including the router/factory, before preparation.
- await Promise.all(Object.entries(codeHashes).map(async ([address,expected])=>{
+ await Promise.all(Object.entries(hashes).map(async ([address,expected])=>{
   const code=await read('eth_getCode',[address,'latest']);
   if(typeof code!=='string'||!/^0x(?:[0-9a-fA-F]{2})+$/.test(code)||keccak256(code as Hex)!==expected)throw new Error('Contract identity check failed.');
  }));
- if(addresses.some(address=>!codeHashes[address.toLowerCase()]))throw new Error('Unverified route token.');
+ if(addresses.some(address=>!hashes[address.toLowerCase()]))throw new Error('Unverified route token.');
  if(intent.kind==='add'||intent.kind==='remove') {
   const {tokenMetadata}=await import('@/lib/config/tokens');
   const data=encodeFunctionData({abi,functionName:'getPair',args:[addr(tokenMetadata[intent.tokenA].address),addr(tokenMetadata[intent.tokenB].address)]});
-  const result=await read('eth_call',[{to:FACTORY,data},'latest']);
+  const result=await read('eth_call',[{to:liquidity?.factory??FACTORY,data},'latest']);
   const pool=decodeFunctionResult({abi,functionName:'getPair',data:result as Hex});
   if(!same(pool,intent.pool))throw new Error('Pool address does not match the verified factory.');
  }
 }
 
-function DetailedReviewButton({intent,enabled,label,onComplete,inline=false,onPrepared}:{intent:Intent|null;enabled:boolean;label:string;onComplete:()=>void;inline?:boolean;onPrepared?:(review:Review,intent:Intent)=>void}) {
+function DetailedReviewButton({intent,enabled,label,onComplete,inline=false,onPrepared,onSuccess}:{intent:Intent|null;enabled:boolean;label:string;onComplete:()=>void;onSuccess?:(intent:Intent)=>void;inline?:boolean;onPrepared?:(review:Review,intent:Intent)=>void}) {
  const wallet=useWallet();const dialog=useRef<HTMLDialogElement>(null);const trigger=useRef<HTMLButtonElement>(null);
  const [reviewIntent,setReviewIntent]=useState('');
  const [visible,setVisible]=useState(false);
@@ -36,7 +39,8 @@ function DetailedReviewButton({intent,enabled,label,onComplete,inline=false,onPr
  const [review,setReview]=useState<Review>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [result,setResult]=useState<{hash:string;historySaved:boolean}>();
  const [status,setStatus]=useState<TransactionStatus['status']>();
  const [statusError,setStatusError]=useState(false);
- const completed=useRef(onComplete);
+ const completed=useRef(onComplete),succeeded=useRef(onSuccess),successHash=useRef<string|undefined>(undefined);
+ useEffect(()=>{succeeded.current=onSuccess;},[onSuccess]);
  useEffect(()=>{completed.current=onComplete;},[onComplete]);
  const [now,setNow]=useState(0);const locked=useRef(false);const alive=useRef(true);const request=useRef<AbortController|null>(null);
  const captured=useRef<{intent:Intent;account:string}|undefined>(undefined);
@@ -48,12 +52,12 @@ function DetailedReviewButton({intent,enabled,label,onComplete,inline=false,onPr
   const poll=async()=>{
    if(document.visibilityState==='hidden'){timer=setTimeout(poll,10_000);return;}
    try {const data=parseStatus(await api(`/v1/transactions/${result.hash}`,undefined,c.signal),result.hash);if(c.signal.aborted)return;setStatus(data.status);setStatusError(false);
-    if(data.status==='confirmed'||data.status==='reverted'){completed.current();return;}
+    if(data.status==='confirmed'||data.status==='reverted'){if(data.status==='confirmed'&&!review?.approval&&captured.current&&successHash.current!==result.hash){successHash.current=result.hash;succeeded.current?.(captured.current.intent);}completed.current();return;}
    } catch {if(c.signal.aborted)return;setStatusError(true);}
    if(!c.signal.aborted)timer=setTimeout(poll,10_000);
   };
   void poll();return()=>{c.abort();clearTimeout(timer);};
- },[result]);
+ },[result,review?.approval]);
  const prepare=async()=>{
   if(!wallet.account||!wallet.correctNetwork){wallet.open();return;}
   if(result && status!=='confirmed' && status!=='reverted'){open();return;}

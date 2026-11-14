@@ -1,6 +1,6 @@
 # Cadinal frontend
 
-Next.js App Router, React, TypeScript and Tailwind CSS. Trading is implemented for QMS Testnet: browser-wallet connection, live token balances, native and ERC-20 swaps, wrap/unwrap, exact approvals, existing-pool liquidity deposits/withdrawals, and local transaction history. Cadinal AI and Profile remain out of scope.
+Next.js App Router, React, TypeScript and Tailwind CSS. Trading is implemented for QMS Testnet: browser-wallet connection, live token balances, native and ERC-20 swaps, wrap/unwrap, exact approvals, and local transaction history. The Cadinal-only liquidity page has existing-pool deposit/withdrawal flows; public liquidity stays unavailable until Cadinal contracts are deployed, verified, and registered. Profile remains out of scope.
 
 ## Run
 
@@ -23,7 +23,8 @@ src/
     layout/            Header, navigation and page shells
   features/
     swap/              Swap UI and feature logic
-    trading/           Validated transaction review, settings and liquidity flows
+    trading/           Validated transaction review and shared settings
+    liquidity/         Cadinal pool discovery, positions and deposit/withdrawal forms
     history/           Wallet-scoped browser history and status tracking
     wallet/            Wallet connection and signing
   hooks/               Shared React hooks
@@ -51,6 +52,7 @@ npm run typecheck
 npm run test:wallet
 npm run test:history
 npm run test:trading
+npm run test:liquidity
 npm run build
 ```
 
@@ -87,7 +89,7 @@ Submitted approvals, swaps, conversions and liquidity operations automatically s
 
 Set NEXT_PUBLIC_API_BASE_URL in .env.local before building. For local development it points to http://localhost:3001; configure the backend CORS_ORIGIN as http://localhost:3000 and open that exact frontend origin. In Railway, set CORS_ORIGIN to the deployed frontend origin and rebuild the frontend with the reachable HTTPS API URL. Local environment changes do not update Railway.
 
-The backend must enable QWAP_QUOTES_ENABLED, SWAP_PREPARATION_ENABLED and LIQUIDITY_PREPARATION_ENABLED. The UI checks /v1/capabilities and disables preparation when unsupported. Quotes and wallet balances use the API; balances refresh periodically. Fiat valuations remain unavailable because no price oracle is configured.
+QWAP swaps require backend QWAP_QUOTES_ENABLED and SWAP_PREPARATION_ENABLED. Liquidity preparation also uses LIQUIDITY_PREPARATION_ENABLED, but these flags alone do not activate Cadinal pools: a verified Cadinal adapter and matching frontend deployment pins are required. The UI checks /v1/capabilities for each operation and venue and disables preparation when unsupported. Quotes and wallet balances use the API; balances refresh periodically. Fiat valuations remain unavailable because no price oracle is configured.
 
 Review swap selects the chosen venue's quote ID. Each preparation is checked against the intended chain, account, router, amount, native value, calldata, route, minima and expiry. The currently supported executable venue is the pinned direct QWAP router. Fee-executor routes require a separately verified frontend registry and are rejected. Runtime code hashes are pinned from the backend testnet registry; liquidity pool addresses are checked against the pinned factory. Do not treat these checks as an independent audit or mainnet approval.
 
@@ -95,7 +97,15 @@ Approvals authorize the exact requested amount to the pinned router. Existing in
 
 Before submission the wallet network and account are checked again, the call is simulated and estimated, gas funding is checked, and only explicit transaction fields are sent. An expired preparation cannot open a new wallet request. The wallet may stay open beyond the review expiry; router swaps have on-chain deadlines, but WQMS deposit/withdraw methods do not. Refresh before retrying rejected/expired transactions. Never interpret submission as success or automatically resend an uncertain transaction.
 
-Native MAX reserves a conservative 6.5 million gas units at twice the current gas price; this is a reserve, not the actual fee. Native balances cannot be fully spent without gas. Native liquidity is unsupported: wrap QMS first. Liquidity is restricted to existing QWAP ERC-20 pools; the router does not enforce a minimum minted LP share count, which is disclosed in review. LP balances use the V2 pair's 18-decimal units.
+Native MAX reserves a conservative 6.5 million gas units at twice the current gas price; this is a reserve, not the actual fee. Native balances cannot be fully spent without gas. Native liquidity is unsupported: wrap QMS first. The liquidity page is restricted to existing Cadinal ERC-20 pools; the router does not enforce a minimum minted LP share count, which is disclosed in review. LP balances use the V2 pair's 18-decimal units.
+
+## Cadinal liquidity
+
+`/liquidity` lists only Cadinal pools on QMS. It loads the backend's paginated `GET /v1/liquidity/pools` catalog, adding the connected wallet address for LP positions. Explore pools supports token/address search; positions show reserve-share estimates and deposit/withdrawal actions. QWAP pools are excluded. USD valuations, APR and volume are not shown without verified data sources.
+
+Deposits suggest the second token amount from the pool ratio. Withdrawals support 25/50/75/100% of the wallet's LP balance. Both use the existing unsigned preparation, exact approval, wallet simulation and transaction-history flows, with `venue: "cadinal"`. Pool identity, recipients, amounts, minima, deadlines, router/factory code hashes and wallet state are checked before signing. Reserve-share estimates are informational; preparation supplies the transaction minima. Refreshes preserve the active transaction review, and a wallet change invalidates the form.
+
+Public Cadinal liquidity is **not activated**. The backend currently registers only QWAP; the Cadinal catalog returns `configured: false`, and `src/lib/config/cadinal-deployment.ts` intentionally contains no public deployment pins. The page shows an unavailable state and disables actions. It never substitutes QWAP addresses or sample positions. See [liquidity activation](docs/liquidity.md) for the remaining deployment steps.
 
 ## Local fork verification
 

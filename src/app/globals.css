@@ -20,7 +20,7 @@ a { text-decoration: none; }
 .exchange-header { background: var(--background); border-top: 1px solid var(--theme-border, #54575c); border-bottom: 1px solid var(--theme-border, #2b2d33); }
 .exchange-nav { position: relative; min-height: 82px; padding: 0 24px 0 20px; display: flex; align-items: center; gap: 22px; }
 .brand { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; color: #fff; }
-.brand-mark { display: flex; color: var(--accent); }
+.brand-mark { display: flex; }
 .brand-name { font-family: Georgia, "Times New Roman", serif; font-size: 27px; font-weight: 700; font-variant: small-caps; letter-spacing: -.7px; }
 .nav-links { display: flex; align-items: center; gap: 24px; }
 .trade-menu { position: relative; }
@@ -67,7 +67,7 @@ a { text-decoration: none; }
 @media (max-width: 420px) {
   .exchange-nav { padding: 14px 12px; gap: 10px; }
   .brand-name { font-size: 22px; }
-  .brand-mark svg { width: 29px; height: 29px; }
+  .brand-mark img { width: 29px; height: 29px; }
   .network-pill { padding: 0 8px; }
   .nav-actions { gap: 8px; }
   .wallet-button { padding: 0 12px; gap: 7px; font-size: 12px; min-height: 38px; }
