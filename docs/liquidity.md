@@ -1,6 +1,6 @@
 # Cadinal liquidity activation
 
-The `/liquidity` page manages Cadinal-owned V2 pools on QMS Testnet (19480). It does not list QWAP pools or accept arbitrary router/factory addresses. The current public deployment is unavailable; the own-pool contracts and integration have only been exercised on a local fork.
+The `/liquidity` page manages Cadinal-owned V2 pools on QMS Testnet (19480). It does not list QWAP pools or accept arbitrary router/factory addresses. The source-verified factory and router are registered, and the initial WQMS/USDC pool is funded on public testnet.
 
 ## Before enabling public liquidity
 
@@ -33,3 +33,9 @@ npm run build
 ```
 
 The liquidity regression suite checks missing deployment configuration, catalog pagination and partial results, position arithmetic, identity validation, and venue-bound approval/transaction destinations. Public deployment and funded-wallet checks remain separate from these automated tests.
+
+
+Verified public testnet pool: `0x264ee763906d572eb48f3E30850BBf6b4540558d`.
+Initial funding was 20 QMS + 10 USDC. Native QMS swaps use the pinned Cadinal router; existing-pool deposits and withdrawals use WQMS and USDC. Source verification and testnet checks do not imply mainnet approval.
+
+The active named router is `0xFa4eaa0C403E55d70aba03fc9c0066732Aff3d33` (CadinalRouter), using the existing factory and pool. Frontend and backend deployment pins must be released together. Existing router approvals do not transfer.

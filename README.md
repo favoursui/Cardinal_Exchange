@@ -1,6 +1,6 @@
 # Cadinal frontend
 
-Next.js App Router, React, TypeScript and Tailwind CSS. Trading is implemented for QMS Testnet: browser-wallet connection, live token balances, native and ERC-20 swaps, wrap/unwrap, exact approvals, and local transaction history. The Cadinal-only liquidity page has existing-pool deposit/withdrawal flows; public liquidity stays unavailable until Cadinal contracts are deployed, verified, and registered. Profile remains out of scope.
+Next.js App Router, React, TypeScript and Tailwind CSS. Trading is implemented for QMS Testnet: browser-wallet connection, live token balances, native and ERC-20 swaps, wrap/unwrap, exact approvals, and local transaction history. The Cadinal-only liquidity page has existing-pool deposit/withdrawal flows; the verified public Cadinal testnet deployment is pinned in the frontend. Profile remains out of scope.
 
 ## Run
 
@@ -105,7 +105,7 @@ Native MAX reserves a conservative 6.5 million gas units at twice the current ga
 
 Deposits suggest the second token amount from the pool ratio. Withdrawals support 25/50/75/100% of the wallet's LP balance. Both use the existing unsigned preparation, exact approval, wallet simulation and transaction-history flows, with `venue: "cadinal"`. Pool identity, recipients, amounts, minima, deadlines, router/factory code hashes and wallet state are checked before signing. Reserve-share estimates are informational; preparation supplies the transaction minima. Refreshes preserve the active transaction review, and a wallet change invalidates the form.
 
-Public Cadinal liquidity is **not activated**. The backend currently registers only QWAP; the Cadinal catalog returns `configured: false`, and `src/lib/config/cadinal-deployment.ts` intentionally contains no public deployment pins. The page shows an unavailable state and disables actions. It never substitutes QWAP addresses or sample positions. See [liquidity activation](docs/liquidity.md) for the remaining deployment steps.
+Cadinal testnet deployment pins are registered in `src/lib/config/cadinal-deployment.ts`. Enable `CADINAL_QUOTES_ENABLED=true` in the API, with `SWAP_PREPARATION_ENABLED=true` and `LIQUIDITY_PREPARATION_ENABLED=true` for unsigned preparations. The funded WQMS/USDC pool is discovered from Cadinal's factory. The page never substitutes QWAP addresses. Deposits and withdrawals currently use WQMS/USDC; wrap native QMS first when depositing and unwrap WQMS after withdrawing if desired. See [liquidity activation](docs/liquidity.md).
 
 ## Local fork verification
 

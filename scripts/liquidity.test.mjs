@@ -3,6 +3,7 @@ import {test} from 'node:test';
 import {encodeFunctionData} from 'viem';
 import {loadTS} from './load-ts.mjs';
 const config=loadTS('src/lib/config/cadinal-deployment.ts');
+const publicDeployment=config.CADINAL_LIQUIDITY_DEPLOYMENT;
 const {parseCatalog}=loadTS('src/features/liquidity/data.ts');
 const {liquidityContracts}=loadTS('src/features/trading/liquidity-contracts.ts');
 const {validatePreparation,requestFor}=loadTS('src/features/trading/validation.ts');
@@ -16,7 +17,9 @@ function page(pools=[pool()]){return {chainId:19480,venue:'cadinal',configured:t
 test('unconfigured own liquidity is empty and cannot fall back to QWAP',()=>{
  const result=parseCatalog({chainId:19480,venue:'cadinal',configured:false,pools:[],partial:false,failures:[],checkedPairs:0,totalPairs:0,nextCursor:null},null,0);
  assert.equal(result.configured,false);assert.equal(result.pools.length,0);
+ config.CADINAL_LIQUIDITY_DEPLOYMENT=null;
  assert.throws(()=>liquidityContracts('cadinal'));
+ config.CADINAL_LIQUIDITY_DEPLOYMENT=publicDeployment;
  assert.throws(()=>parseCatalog(page(),account,0));
  assert.throws(()=>parseCatalog(page(),account,0,{...deployment,router:ROUTER,factory:FACTORY}));
 });
@@ -50,7 +53,7 @@ test('Cadinal deposits and approvals bind the selected router and reject externa
   assert.equal(validatePreparation(approval,intent,account).approval,true);
   assert.throws(()=>validatePreparation({...approval,spender:ROUTER},intent,account));
   const pins=liquidityContracts('cadinal');assert.equal(pins.factory,deployment.factory);assert.equal(pins.hashes[ROUTER.toLowerCase()],undefined);
- }finally{config.CADINAL_LIQUIDITY_DEPLOYMENT=null;}
+ }finally{config.CADINAL_LIQUIDITY_DEPLOYMENT=publicDeployment;}
 });
 
 test('Cadinal withdrawals bind LP approval and reject weakened output protection',()=>{
@@ -73,5 +76,5 @@ test('Cadinal withdrawals bind LP approval and reject weakened output protection
   assert.equal(validatePreparation(approval,intent,account).transaction.to,poolAddress);
   assert.throws(()=>validatePreparation({...approval,spender:ROUTER},intent,account));
   assert.throws(()=>validatePreparation({...approval,token:WQMS},intent,account));
- }finally{config.CADINAL_LIQUIDITY_DEPLOYMENT=null;}
+ }finally{config.CADINAL_LIQUIDITY_DEPLOYMENT=publicDeployment;}
 });

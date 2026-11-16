@@ -7,12 +7,12 @@ import {qmsWalletChain} from '@/features/wallet/network';
 import {api} from './api';
 import {parseStatus,statusLabels,type TransactionStatus} from '@/features/history/store';
 import {abi,codeHashes,FACTORY} from './contracts';
-import {liquidityContracts} from './liquidity-contracts';
+import {liquidityContracts,type LiquidityVenue} from './liquidity-contracts';
 import {addr,requestFor,same,validatePreparation,type Intent,type Review} from './validation';
 import styles from './trading.module.css';
 
 async function verifyContracts(intent:Intent,read:ReturnType<typeof useWallet>['readRpc']) {
- const liquidity=intent.kind==='add'||intent.kind==='remove'?liquidityContracts(intent.venue??'qwap'):undefined;
+ const liquidity=intent.kind==='add'||intent.kind==='remove'?liquidityContracts(intent.venue??'qwap'):intent.kind==='swap'?liquidityContracts(intent.quote.venue as LiquidityVenue):undefined;
  const hashes=liquidity?.hashes??codeHashes;
  const addresses=intent.kind==='swap'?intent.quote.path:intent.kind==='wrap'||intent.kind==='unwrap'?[]:[];
  // Validate all pinned contract runtimes, including the router/factory, before preparation.
@@ -21,6 +21,13 @@ async function verifyContracts(intent:Intent,read:ReturnType<typeof useWallet>['
   if(typeof code!=='string'||!/^0x(?:[0-9a-fA-F]{2})+$/.test(code)||keccak256(code as Hex)!==expected)throw new Error('Contract identity check failed.');
  }));
  if(addresses.some(address=>!hashes[address.toLowerCase()]))throw new Error('Unverified route token.');
+ if(intent.kind==='swap') {
+  for(let i=0;i<intent.quote.path.length-1;i++) {
+   const data=encodeFunctionData({abi,functionName:'getPair',args:[intent.quote.path[i],intent.quote.path[i+1]]});
+   const result=await read('eth_call',[{to:liquidity!.factory,data},'latest']);
+   if(!same(decodeFunctionResult({abi,functionName:'getPair',data:result as Hex}),intent.quote.pools[i]))throw new Error('Swap pool does not match the selected factory.');
+  }
+ }
  if(intent.kind==='add'||intent.kind==='remove') {
   const {tokenMetadata}=await import('@/lib/config/tokens');
   const data=encodeFunctionData({abi,functionName:'getPair',args:[addr(tokenMetadata[intent.tokenA].address),addr(tokenMetadata[intent.tokenB].address)]});

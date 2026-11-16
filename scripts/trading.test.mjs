@@ -80,3 +80,18 @@ test('swap deadlines follow the selected duration and reject mismatched preparat
  assert.equal(requestFor(swap().intent,account).body.deadlineSeconds,120);
  for(const seconds of [59,1801,120.5])assert.throws(()=>validatePreparation(swap().response,{...swap().intent,deadlineSeconds:seconds},account));
 });
+
+test('Cadinal swaps and approvals bind the selected public router and reject venue substitution',()=>{
+ const {CADINAL_LIQUIDITY_DEPLOYMENT:c}=loadTS('src/lib/config/cadinal-deployment.ts');
+ const raw={chainId:19480,venue:'cadinal',venueName:'Cadinal',router:c.router,tokenIn:NATIVE,tokenOut:usdc,amountIn:'1000',amountOut:'2000',minimumAmountOut:'1990',slippageBps:50,path:[WQMS,usdc],pools:[pool],quoteId:'11111111-1111-4111-8111-111111111111',expiresAt:fresh()};
+ const q=parseQuote(raw,'QMS','USDC','1000',50);assert.equal(q.venue,'cadinal');
+ for(const patch of [{router:ROUTER},{router:'0x7f627910EcD3e89aAb79519C90Cb6CAa96e327c1'},{venue:'unknown'},{venue:'qwap'}])assert.throws(()=>parseQuote({...raw,...patch},'QMS','USDC','1000',50));
+ const {response}=swap('QMS','USDC'),intent={kind:'swap',quote:q};response.venue='cadinal';response.transaction.to=c.router;
+ assert.equal(validatePreparation(response,intent,account).transaction.to.toLowerCase(),c.router.toLowerCase());
+ assert.throws(()=>validatePreparation({...response,transaction:{...response.transaction,to:ROUTER}},intent,account));
+ assert.throws(()=>validatePreparation({...response,venue:'qwap'},intent,account));
+ const tokenQuote=parseQuote({...raw,tokenIn:WQMS},'WQMS','USDC','1000',50);
+ const approval={chainId:19480,status:'approval_required',venue:'cadinal',quoteId:q.quoteId,token:WQMS,owner:account,spender:c.router,amount:'1000',currentAllowance:'0',resetAllowanceFirst:false};
+ assert.equal(validatePreparation(approval,{kind:'swap',quote:tokenQuote},account).approval,true);
+ assert.throws(()=>validatePreparation({...approval,spender:ROUTER},{kind:'swap',quote:tokenQuote},account));
+});

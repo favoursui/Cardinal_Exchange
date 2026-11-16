@@ -3,6 +3,7 @@ import { ROUTER, FACTORY, codeHashes } from './contracts';
 export type LiquidityVenue = 'cadinal' | 'qwap';
 export function liquidityContracts(venue: LiquidityVenue) {
   if (venue === 'qwap') return { router: ROUTER, factory: FACTORY, hashes: codeHashes };
+  if (venue !== 'cadinal') throw new Error('Unsupported exchange.');
   const deployment = CADINAL_LIQUIDITY_DEPLOYMENT;
   if (!deployment || deployment.chainId !== 19480 || deployment.router.toLowerCase() === ROUTER.toLowerCase() || deployment.factory.toLowerCase() === FACTORY.toLowerCase()) throw new Error('Cadinal liquidity is not available yet.');
   const hashes = { ...codeHashes };

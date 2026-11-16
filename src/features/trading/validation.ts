@@ -13,13 +13,15 @@ const pathAddress = (token: Token) => token === 'QMS' ? WQMS : addressOf(token);
 export type TradingQuote = { quoteId: string; venue: string; venueName: string; amountOut: string; minimumAmountOut: string; expiresAt: string; path: Address[]; pools: Address[]; tokenIn: Token; tokenOut: Token; amountIn: string; slippageBps: number };
 export function parseQuote(value: unknown, input: Token, output: Token, amount: string, slippage: number): TradingQuote {
  const q=object(value), path=(q.path as unknown[]), pools=(q.pools as unknown[]);
- requireThat(q.chainId===19480 && q.venue==='qwap' && same(q.router,ROUTER) && !q.cadinalFee && !q.cardinalFee && same(q.tokenIn,addressOf(input)) && same(q.tokenOut,addressOf(output)) && q.amountIn===amount && q.slippageBps===slippage);
+ requireThat(q.venue==='qwap'||q.venue==='cadinal');
+ const venue=q.venue as LiquidityVenue;
+ requireThat(q.chainId===19480 && same(q.router,liquidityContracts(venue).router) && !q.cadinalFee && !q.cardinalFee && same(q.tokenIn,addressOf(input)) && same(q.tokenOut,addressOf(output)) && q.amountIn===amount && q.slippageBps===slippage);
  requireThat(Array.isArray(path) && path.length>=2 && path.length<=3 && same(path[0],pathAddress(input)) && same(path.at(-1),pathAddress(output)) && (path.length!==3 || same(path[1],WQMS)));
  requireThat(Array.isArray(pools) && pools.length===path.length-1);
  requireThat(uint(q.amountOut)>BigInt(0) && uint(q.minimumAmountOut)>BigInt(0) && uint(q.minimumAmountOut)===uint(q.amountOut)*BigInt(10000-slippage)/BigInt(10000));
  requireThat(/^[0-9a-f-]{36}$/i.test(text(q.quoteId)) && text(q.venueName).length>0 && text(q.venueName).length<=80);
  const expires=Date.parse(text(q.expiresAt)); requireThat(expires>Date.now() && expires<=Date.now()+15_000);
- return {quoteId:text(q.quoteId),venue:'qwap',venueName:text(q.venueName),amountOut:text(q.amountOut),minimumAmountOut:text(q.minimumAmountOut),expiresAt:text(q.expiresAt),path:path.map(addr),pools:pools.map(addr),tokenIn:input,tokenOut:output,amountIn:amount,slippageBps:slippage};
+ return {quoteId:text(q.quoteId),venue,venueName:venue==='cadinal'?'Cadinal':'QWAP',amountOut:text(q.amountOut),minimumAmountOut:text(q.minimumAmountOut),expiresAt:text(q.expiresAt),path:path.map(addr),pools:pools.map(addr),tokenIn:input,tokenOut:output,amountIn:amount,slippageBps:slippage};
 }
 export type Intent = {kind:'swap';quote:TradingQuote;deadlineSeconds?:number} | {kind:'wrap';amount:string} | {kind:'unwrap';amount:string} | {kind:'add'|'remove';venue?:LiquidityVenue;tokenA:Token;tokenB:Token;amountA:string;amountB:string;slippageBps:number;pool:Address};
 export type Review = {transaction:WalletTransaction;title:string;lines:string[];approval:boolean;addresses:Address[];pool?:{address:Address;tokenA:Address;tokenB:Address}};
@@ -34,7 +36,7 @@ export function requestFor(intent:Intent, wallet:string) {
 }
 export function validatePreparation(raw:unknown,intent:Intent,wallet:string):Review {
  const r=object(raw); requireThat(r.chainId===19480 && !r.cadinalFee && !r.cardinalFee);
- const router=intent.kind==='add'||intent.kind==='remove'?liquidityContracts(intent.venue??'qwap').router:ROUTER;
+ const router=intent.kind==='add'||intent.kind==='remove'?liquidityContracts(intent.venue??'qwap').router:intent.kind==='swap'?liquidityContracts(intent.quote.venue as LiquidityVenue).router:ROUTER;
  const account=getAddress(wallet), addresses:Address[]=[router];
  let pool:Review['pool'];
  const amounts=new Map<string,{amount:string;symbol:Token|'LP'}>();
