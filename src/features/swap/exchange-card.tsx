@@ -206,7 +206,7 @@ export function ExchangeCard() {
           <p>{conversion === "Wrap" ? "Convert QMS into wrapped QMS for token swaps." : "Convert wrapped QMS back to native QMS."}</p>
           <p>No swap fee or slippage. Network gas still applies.</p>
         </div>
-      </div> : <div className={styles.routeSection}>
+      </div> : route.quote ? <div className={styles.routeSection}>
         <div className={styles.routeHeading}><span>Swap route</span><span className={styles.routeStatus} role="status">{route.status}</span></div>
         <div className={styles.routeCard}>
           {route.quote && route.best && <span className={styles.bestReturnTag}>Best Return</span>}
@@ -223,7 +223,7 @@ export function ExchangeCard() {
         </div>
         <div className={styles.routeFooter}><span>Slippage: {slippage}%</span><button disabled={!route.quotes.length} type="button" aria-expanded={routesOpen} onClick={() => setOpenRoutesKey(routesOpen ? null : routesKey)}>{routesOpen ? "Hide routes" : "See all routes"} <span aria-hidden="true">›</span></button></div>
         {routesOpen && <div className={styles.routeChoices}>{route.quotes.map((quote, index) => <button key={quote.quoteId} type="button" aria-pressed={route.quote?.quoteId === quote.quoteId} onClick={() => { route.select(quote.venue); setOpenRoutesKey(null); }}><span className={styles.routeChoiceIdentity}>{quote.venue === "qwap" && <Image src="/images/qwap.jpg" alt="" width={18} height={18} className={styles.venueLogo} />}<span>{quote.venueName}</span>{index === 0 && <span className={styles.routeChoiceBest}>Best Return</span>}</span><span className={styles.routeChoiceAmount}>{displayUnits(quote.amountOut, tokenMetadata[outputToken].decimals)} {outputToken}</span></button>)}</div>}
-      </div>}
+      </div> : null}
 
       {maxError && <p role="alert">{maxError}</p>}
       {capabilities.error && <p role="alert">{capabilities.error}</p>}
