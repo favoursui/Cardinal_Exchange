@@ -1,11 +1,11 @@
 import type { Address, Hex } from 'viem';
 export type CadinalDeployment = { chainId:19480; router:Address; factory:Address; routerHash:Hex; factoryHash:Hex };
 // Populate only from reviewed public QMS deployment evidence, never API/user input.
-// Verified QMS testnet factory/router; no QWAP fallback.
+// Source-verified Cadinal factory/router and funded WQMS/USDC pool on QMS testnet; no QWAP fallback.
 export const CADINAL_LIQUIDITY_DEPLOYMENT: CadinalDeployment | null = {
  chainId:19480,
- factory:'0x0EBd9c9523fBD5F4DaCC7c46EC56E7e4A215792a',
- router:'0xFa4eaa0C403E55d70aba03fc9c0066732Aff3d33',
- factoryHash:'0xbab145d02e7005f0d84c6c1639d39b799b0ea16df99ebbdaf5a14d9da820b4e0',
- routerHash:'0x178cbadccd90eeb8185aef8caab924eb3d6e1890b22dd03bef7b1c07aa1c2620',
+ factory:'0xeb79d4CDC34E2f18ab5B9652D2e876F8E47595fF',
+ router:'0xb6530355d0F8c18D41B29443bC0defF3bE7E65f2',
+ factoryHash:'0x5fad43fd93b2fa69bcfbaade36a9efad3aa62d24cdf038b1288f34542a3a449f',
+ routerHash:'0x8b94e21281d5bece77c6d8849a08535553fd598871747dfcfdb8fa1e1304d046',
 };

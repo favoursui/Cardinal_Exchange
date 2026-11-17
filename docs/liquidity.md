@@ -1,17 +1,17 @@
 # Cadinal liquidity activation
 
-The `/liquidity` page manages Cadinal-owned V2 pools on QMS Testnet (19480). It does not list QWAP pools or accept arbitrary router/factory addresses. The source-verified factory and router are registered, and the initial WQMS/USDC pool is funded on public testnet.
+The `/liquidity` page manages Cadinal-owned V2 pools on QMS Testnet (19480). It does not list QWAP pools or accept arbitrary router/factory addresses. The source-verified CadinalFactory and CadinalRouter are registered, and the funded WQMS/USDC pool is active in the Cadinal app registry.
 
-## Before enabling public liquidity
+## Registered QMS testnet contracts
 
-1. Review and deploy the Cadinal factory/router using the backend contract deployment workflow. Record the chain, addresses, deployment receipts, runtime bytecode hashes, wrapped QMS address, token allowlist, and fee authority. Verify router/factory linkage and source code. Do not reuse QWAP addresses.
-2. Add a reviewed Cadinal public registry and register its adapter in the backend server for pool reads, wallet balances, deposit preparation, and withdrawal preparation. Pin the deployed factory/router/token runtime hashes. The current server registers only QWAP; changing environment flags alone is insufficient. Keep unverified deployments disabled.
-3. Populate `src/lib/config/cadinal-deployment.ts` from that reviewed evidence, using the exact same chain, router, factory, and runtime hashes. Update the trusted token metadata/code hashes if the allowlist changes. Rebuild the frontend. API responses and user input must never supply these trust pins.
-4. Create and seed the intended pools through the reviewed deployment/initial-liquidity workflow. The page adds liquidity only to existing initialized pools; it does not create pairs or establish their initial price. Native QMS must be wrapped before an ERC-20 pool deposit.
-5. Enable the existing preparation flags and confirm `/v1/capabilities` advertises `cadinal` separately for `liquidityAddition` and `liquidityRemoval`. Verify the Cadinal catalog, wallet balances, exact approvals, deposit, LP position, partial/full withdrawal, and history on public testnet with small test amounts. Confirm account/network changes, rejected wallet prompts, expired preparations, and upstream failures leave the UI safe to retry.
-6. Activate Cadinal swap routing separately: register it for backend quotes/preparations and add verified venue-specific frontend swap validation. This liquidity change does not enable a public Cadinal swap route. Existing executable swaps remain pinned to QWAP.
+- Factory: `0xeb79d4CDC34E2f18ab5B9652D2e876F8E47595fF`
+- Router: `0xb6530355d0F8c18D41B29443bC0defF3bE7E65f2`
+- WQMS/USDC pair: `0xF436b4D445A6f108E151c4Af480EDF56112828f5`
+- LP token: Cadinal LP (`CDNL-LP`)
 
-The page remains read-only or unavailable until its deployment pins and the backend capabilities agree. Contract review and a successful testnet run are still required; compilation and unit tests do not establish mainnet readiness.
+Frontend pins live in `src/lib/config/cadinal-deployment.ts`; the matching backend registry is in `qmsbackend/backend/apps/api/src/adapters/cadinal-registry.ts`. Update and deploy both together. Historical pools under the previous factory remain separate and are not discovered by the new registry.
+
+The replacement contracts and funded testnet pool are source-verified and registered for testnet use. This is not mainnet approval or an independent security audit.
 
 ## Data and behavior
 
@@ -35,7 +35,6 @@ npm run build
 The liquidity regression suite checks missing deployment configuration, catalog pagination and partial results, position arithmetic, identity validation, and venue-bound approval/transaction destinations. Public deployment and funded-wallet checks remain separate from these automated tests.
 
 
-Verified public testnet pool: `0x264ee763906d572eb48f3E30850BBf6b4540558d`.
-Initial funding was 20 QMS + 10 USDC. Native QMS swaps use the pinned Cadinal router; existing-pool deposits and withdrawals use WQMS and USDC. Source verification and testnet checks do not imply mainnet approval.
+## Cadinal pool registration
 
-The active named router is `0xFa4eaa0C403E55d70aba03fc9c0066732Aff3d33` (CadinalRouter), using the existing factory and pool. Frontend and backend deployment pins must be released together. Existing router approvals do not transfer.
+The source-verified Cadinal factory and router are pinned in `src/lib/config/cadinal-deployment.ts`. The funded WQMS/USDC pair is `0xF436b4D445A6f108E151c4Af480EDF56112828f5`; its LP token is Cadinal LP (`CDNL-LP`). Backend routing uses the matching pinned registry in `qmsbackend/backend/apps/api/src/adapters/cadinal-registry.ts`. Restart/redeploy the API and rebuild/redeploy the frontend together before using these addresses. Existing positions in the old factory remain separate.
