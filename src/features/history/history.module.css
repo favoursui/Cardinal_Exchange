@@ -4,7 +4,7 @@
 .form label { display: block; margin-bottom: 8px; color: var(--theme-text, #d7deea); }
 .form > div { display: flex; gap: 8px; }
 .form input { min-width: 0; flex: 1; padding: 10px; background: var(--theme-inset, #242b35); border: 1px solid var(--theme-border, #455267); border-radius: 5px; font-size: 16px; }
-.form button, .empty button { padding: 10px 14px; border-radius: 5px; background: var(--accent); color: white; cursor: pointer; }
+.form button, .empty button { padding: 10px 14px; border-radius: 5px; background: var(--button-primary); color: var(--button-primary-text); cursor: pointer; }
 .form button:disabled { opacity: .5; cursor: not-allowed; }
 .content .error { color: var(--theme-error, #ffabab); }
 .empty { padding: 18px 0; color: var(--theme-muted, #b8c4d6); font-size: 13px; }

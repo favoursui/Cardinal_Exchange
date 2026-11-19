@@ -63,7 +63,7 @@
 .routeFooter { display: flex; justify-content: space-between; margin-top: 9px; font-size: 10px; color: var(--theme-muted, #9b9bab); }
 .routeFooter button { color: var(--accent); cursor: not-allowed; }
 .routeFooter button span { margin-left: 4px; font-size: 15px; }
-.submit, .saveButton { display: block; width: 100%; background: var(--accent); color: #fff; border-radius: 6px; padding: 13px; font-size: 12px; font-weight: 500; margin-top: 20px; }
+.submit, .saveButton { display: block; width: 100%; background: var(--button-primary); color: var(--button-primary-text); border-radius: 6px; padding: 13px; font-size: 12px; font-weight: 500; margin-top: 20px; }
 .submit:disabled { cursor: not-allowed; }
 .notice { text-align: center; margin-top: 10px; color: var(--theme-muted, #8f8f9d); font-size: 10px; }
 .settingsDialog { margin: auto; padding: 22px; border-radius: 14px; border: 1px solid var(--theme-border, #393943); background: var(--theme-surface, #1b1b22); color: var(--theme-text, #eeeef5); width: min(360px, calc(100vw - 32px)); }

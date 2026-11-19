@@ -5,7 +5,7 @@
 .subtitle { margin-top: 10px; color: var(--theme-muted, #9bacc1); font-size: 14px; line-height: 1.65; }
 .headerActions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .primary, .secondary { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 42px; padding: 10px 17px; border: 1px solid transparent; border-radius: 6px; font-size: 13px; font-weight: 600; line-height: 1.4; text-align: center; cursor: pointer; }
-.primary { background: var(--accent); color: #fff; }
+.primary { background: var(--button-primary); color: var(--button-primary-text); }
 .secondary { border-color: var(--theme-border, #435064); background: transparent; color: var(--theme-text, #edf1f7); }
 .primary:disabled, .secondary:disabled, .refresh:disabled, .percentButtons button:disabled { opacity: .45; cursor: not-allowed; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 28px; }

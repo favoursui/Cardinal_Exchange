@@ -2,9 +2,12 @@
 
 :root {
   color-scheme: dark;
-  --background: #182029;
+  --background: #101c1b;
   --foreground: #f6f7f9;
   --accent: #2b6cf2;
+  --button-primary: #82f5df;
+  --button-primary-hover: #70ebd4;
+  --button-primary-text: #10201d;
 }
 
 @theme inline {
@@ -28,9 +31,9 @@ a { text-decoration: none; }
 .trade-menu:has([aria-current="page"]) > .trade-trigger, .nav-link[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
 .trade-trigger::-webkit-details-marker { display: none; }
 .trade-menu[open] .trade-trigger svg { transform: rotate(180deg); }
-.trade-options { position: absolute; top: calc(100% + 13px); left: 0; z-index: 20; width: 200px; padding: 6px; background: var(--theme-surface, #191c22); border: 1px solid var(--theme-border, #303640); border-radius: 14px; box-shadow: 0 12px 32px #0006; }
+.trade-options { position: absolute; top: 100%; left: 0; z-index: 20; width: 200px; padding: 7px; background: transparent; border: 1px solid rgb(202 232 222 / 16%); border-radius: 14px; -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 16px 40px rgb(0 0 0 / 28%), inset 0 1px rgb(255 255 255 / 5%); }
 .trade-options a, .trade-options button { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 12px; border-radius: 9px; font-size: 14px; color: var(--theme-muted, #bdcbe0); }
-.trade-options a:hover { background: var(--theme-inset, #253545); color: var(--accent); }
+.trade-options a:hover { background: rgb(202 232 222 / 10%); color: #82f5df; }
 .trade-options button:disabled { color: var(--theme-muted, #8894a6); cursor: not-allowed; }
 .soon-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; }
 .nav-link { min-height: 36px; padding: 0 12px; background: transparent; border-bottom: 2px solid transparent; color: var(--theme-muted, #7f94af); font-size: 14px; font-weight: 600; white-space: nowrap; }
@@ -97,6 +100,8 @@ html:has(dialog[open]) { overflow: hidden; }
   --theme-warning: #886414;
 }
 :root[data-theme="light"] .brand { color: var(--foreground); }
+:root[data-theme="light"] .trade-options { background: transparent; border-color: rgb(80 102 93 / 18%); box-shadow: 0 16px 40px rgb(31 45 39 / 16%), inset 0 1px rgb(255 255 255 / 70%); }
+:root[data-theme="light"] .trade-options a:hover { background: rgb(80 135 111 / 10%); color: #287764; }
 .theme-toggle { display: grid; flex-shrink: 0; }
 @media (hover: hover) {
   :root[data-theme="light"] .theme-toggle:hover { background: #00000005; border-color: #00000008; }
@@ -125,3 +130,41 @@ html:has(dialog[open]) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .theme-revealing::view-transition-new(root) { animation: none; }
 }
+
+
+/* Compact rounded analytics-style navigation bar. */
+.exchange-header{display:flex;align-items:center;gap:10px;padding:4px 16px;background:var(--background);border:0}
+.exchange-nav{flex:1;min-width:0;min-height:48px;margin:8px 0;padding:0 14px 0 18px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:18px;border:1px solid #263a35;border-radius:999px;background:var(--background)}
+.brand{grid-column:1;gap:7px}
+.brand-mark img{width:23px;height:23px}
+.brand-name{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:500;font-variant:normal;letter-spacing:-.35px}
+.brand-section{margin-left:1px;color:#53b79e;font-size:17px;font-weight:400;letter-spacing:-.2px}
+.nav-links{grid-column:2;gap:12px}
+.trade-trigger,.nav-link{min-height:34px;padding:0 8px;border:0;color:#8c9995;font-size:12px;font-weight:400}
+.trade-trigger:hover,.nav-link:not(:disabled):hover{color:#dce7e3}
+.trade-menu:has([aria-current="page"])>.trade-trigger,.nav-link[aria-current="page"]{color:#53b79e;border:0}
+.nav-actions{grid-column:3;gap:9px}
+.network-pill{height:32px;padding:0 8px;border:1px solid #263a35;border-radius:999px;background:transparent}
+.network-mark{width:18px;height:18px}
+.wallet-button{min-height:38px;padding:0 16px;background:var(--button-primary);color:var(--button-primary-text);font-size:12px;font-weight:600}
+.header-wallet{flex:0 0 auto}
+.settings-button{width:34px;height:34px;color:#9ba8a4}
+.mobile-menu-button{width:34px;height:34px;border-radius:50%;background:transparent;color:#a3b0ac}
+@media(max-width:800px){
+  .exchange-header{gap:8px;padding:4px 10px}
+  .exchange-nav{min-height:48px;margin:6px 0;padding:0 10px;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+  .brand{grid-column:1}
+  .brand-section,.brand-name{display:none}
+  .brand-mark img{width:25px;height:25px}
+  .nav-actions{grid-column:2;gap:7px}
+  .nav-links{grid-column:1/-1}
+}
+@media(max-width:420px){
+  .exchange-header{gap:6px;padding:3px 6px}
+  .exchange-nav{margin:5px 0;padding:0 8px}
+  .wallet-button{min-height:36px;padding:0 11px;font-size:10px;gap:5px}
+  .header-wallet>svg:first-child{display:none}
+  .network-pill{padding:0 6px}
+}
+
+@media(hover:hover){.wallet-button:hover{background:var(--button-primary-hover)}}
