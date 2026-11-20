@@ -1,24 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { TokenLogo } from "@/components/ui/token-logo";
+import { useEffect, useState } from "react";
 import { api, object } from "@/features/trading/api";
-import { parseCatalog, type LiquidityPool } from "@/features/liquidity/data";
-import { tokenMetadata } from "@/lib/config/tokens";
 import styles from "./analytics.module.css";
 
-type Snapshot = { pools: LiquidityPool[]; checkedAt: string; partial: boolean; failures: number; configured: boolean };
 type UsersMetric = { status: "indexing" | "ready" | "unavailable"; totalUsers: string | null; block?: string };
-const amount = (raw: string, decimals: number) => {
-  const value = BigInt(raw), scale = BigInt(10) ** BigInt(decimals);
-  const whole = value / scale;
-  const fraction = (value % scale).toString().padStart(decimals, "0").slice(0, 4).replace(/0+$/, "");
-  if (!whole && !fraction && value > BigInt(0)) return "<0.0001";
-  return new Intl.NumberFormat("en-US").format(whole) + (fraction ? "." + fraction : "");
-};
-const shortAddress = (address: string) => address.slice(0, 8) + "…" + address.slice(-6);
-
 const transactionRanges = ["24H", "7D", "30D", "90D", "1Y", "ALL"] as const;
 
 function TransactionsCard() {
@@ -86,40 +72,8 @@ function VolumeCard() {
 }
 
 export function AnalyticsDashboard() {
-  const [snapshot, setSnapshot] = useState<Snapshot>();
   const [usersMetric, setUsersMetric] = useState<UsersMetric>({ status: "indexing", totalUsers: null });
-  const [venues, setVenues] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [revision, setRevision] = useState(0);
   const [feePeriod, setFeePeriod] = useState<(typeof feePeriods)[number]>("24h");
-  const load = useCallback(async (signal: AbortSignal) => {
-    setLoading(true); setError("");
-    try {
-      const caps = object(await api("/v1/capabilities", undefined, signal));
-      if (caps.chainId !== 19480 || caps.testnet !== true) throw new Error("Analytics API is not connected to QMS testnet.");
-      const operations = object(caps.operations), quotes = object(operations.quotes), poolReads = object(operations.poolReads);
-      setVenues(Array.isArray(quotes.venues) ? quotes.venues.filter((venue): venue is string => typeof venue === "string") : []);
-      if (poolReads.enabled !== true) {
-        setSnapshot({ pools: [], checkedAt: new Date().toISOString(), partial: false, failures: 0, configured: false });
-        return;
-      }
-      const pools: LiquidityPool[] = [];
-      let cursor = 0, partial = false, failures = 0, configured = true;
-      do {
-        const data = await api("/v1/liquidity/pools?cursor=" + cursor, undefined, signal);
-        const parsed = parseCatalog(data, null, cursor);
-        configured = parsed.configured; pools.push(...parsed.pools); partial ||= parsed.partial;
-        failures += Array.isArray(data.failures) ? data.failures.length : 0;
-        if (parsed.nextCursor === null) break;
-        cursor = parsed.nextCursor;
-      } while (!signal.aborted);
-      if (!signal.aborted) setSnapshot({ pools, checkedAt: new Date().toISOString(), partial, failures, configured });
-    } catch (cause) {
-      if (!signal.aborted) setError(cause instanceof Error ? cause.message : "Could not load live Cadinal analytics.");
-    } finally { if (!signal.aborted) setLoading(false); }
-  }, []);
-  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load, revision]);
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -150,13 +104,10 @@ export function AnalyticsDashboard() {
     };
     void refreshUsers();
     return () => { active = false; controller.abort(); window.clearTimeout(timer); };
-  }, [revision]);
+  }, []);
 
-  const pools = snapshot?.pools ?? [];
-  const refresh = () => setRevision(value => value + 1);
 
   return <div className={styles.dashboard}>
-    {error && <div role="alert" className={styles.error}>{error}<button onClick={refresh}>Try again</button></div>}
 
     <Section title="Live market snapshot" />
     <section className={styles.overview}>
@@ -248,7 +199,7 @@ export function AnalyticsDashboard() {
     </section>
 
     <Section title="Trading Activity" />
-    <section className={styles.growthGrid} aria-label="Trading activity analytics">
+    <section className={styles.growthGrid + " " + styles.tradingActivity} aria-label="Trading activity analytics">
       <TradeCountCard />
       <DailyUsersCard />
     </section>
@@ -259,44 +210,11 @@ export function AnalyticsDashboard() {
       <TopUsersCard />
     </section>
 
-    <Section title="Markets and data quality" />
-    <section className={styles.grid}>
-      <article className={styles.panel}>
-        <PanelTitle eyebrow="VERIFIED CONTRACT READS" title="Cadinal pools" badge={snapshot?.partial ? "PARTIAL DATA" : "ONCHAIN"} />
-        {!pools.length && !loading ? <div className={styles.emptyState}><b>{snapshot?.configured ? "No pools found" : "Pool analytics unavailable"}</b><p>{snapshot?.configured ? "No listed token pairs currently have a deployed Cadinal pool." : "The API has not enabled Cadinal pool reads."}</p><Link href="/liquidity">Open liquidity</Link></div> :
-        <div className={styles.tableWrap}><table><thead><tr><th>Pool</th><th>Reserves</th><th>LP supply</th><th>Observed</th></tr></thead><tbody>
-          {pools.map(pool => <tr key={pool.address}><td><span className={styles.pair}><span><TokenLogo symbol={pool.tokenA} /><TokenLogo symbol={pool.tokenB} /></span><span><b>{pool.tokenA}/{pool.tokenB}</b><small>{shortAddress(pool.address)}</small></span></span></td>
-            <td>{amount(pool.reserveA, tokenMetadata[pool.tokenA].decimals)} {pool.tokenA}<br />{amount(pool.reserveB, tokenMetadata[pool.tokenB].decimals)} {pool.tokenB}</td>
-            <td>{amount(pool.totalSupply, 18)} LP</td><td>{new Date(pool.observedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td></tr>)}
-        </tbody></table>{loading && <p className={styles.loading}>Refreshing pool snapshot…</p>}</div>}
-        {snapshot?.partial && <p className={styles.warning}>{snapshot.failures} pair reads could not be checked. Refresh to retry.</p>}
-      </article>
-      <article className={styles.panel}>
-        <PanelTitle eyebrow="INDEXING STATUS" title="Network activity" badge="DATA SOURCES" />
-        <div className={styles.sources}>
-          <Source name="Live pool reserves" detail="Cadinal factory and pairs on QMS" status={snapshot?.configured ? "CONNECTED" : "OFFLINE"} />
-          <Source name="Quote venues" detail={venues.map(value => value.toUpperCase()).join(", ") || "No venues advertised"} status={venues.length ? "CONNECTED" : "OFFLINE"} />
-          <Source name="Unique swap and LP users" detail="Confirmed events across enabled venues" status={usersMetric.status === "ready" ? "CONNECTED" : usersMetric.status === "indexing" ? "INDEXING" : "OFFLINE"} />
-          <Source name="Historical swaps and volume" detail="Requires trade volume indexing" status="NOT INDEXED" />
-          <Source name="USD TVL and revenue" detail="Requires token pricing and fee indexing" status="NOT AVAILABLE" />
-        </div>
-        <button type="button" className={styles.refresh} onClick={refresh} disabled={loading} aria-label="Refresh analytics" title="Refresh live snapshot">↻</button>
-        <div className={styles.info}><b>Snapshot taken</b><span>{snapshot ? new Date(snapshot.checkedAt).toLocaleString() : loading ? "Loading…" : "No snapshot"}</span><p>Unique users appear after the confirmed event history is indexed. Historical volume, revenue, and USD valuations still need separate indexing and pricing.</p></div>
-      </article>
-    </section>
     <footer className={styles.footer}>Data from Cadinal’s configured QMS Testnet contracts and API. Values are live snapshots, not historical records or financial advice.</footer>
   </div>;
 }
 
 function Section({ title }: { title: string }) { return <div className={styles.section}><span>{title}</span><i /></div>; }
-function PanelTitle({ eyebrow, title, badge }: { eyebrow: string; title: string; badge: string }) {
-  return <div className={styles.panelTitle}><div><p>{eyebrow}</p><h2>{title}</h2></div><span>{badge}</span></div>;
-}
-function Source({ name, detail, status }: { name: string; detail: string; status: string }) {
-  return <div className={styles.source}><i aria-hidden="true">{status === "CONNECTED" ? "✓" : "·"}</i><span><b>{name}</b><small>{detail}</small></span><strong data-online={status === "CONNECTED"}>{status}</strong></div>;
-}
-
-
 function AllTimeMetric({ label, value = "—", detail = "Not indexed yet" }: { label: string; value?: string; detail?: string }) {
   return <article className={styles.allTimeMetric}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
 }
