@@ -20,16 +20,27 @@ export function Navbar() {
   const [tradeOpen, setTradeOpen] = useState(false);
   const navigation = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const tradeTrigger = useRef<HTMLButtonElement>(null);
+  const tradeMenu = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !tradeOpen) return;
     const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !navigation.current?.contains(event.target)) setMenuOpen(false);
+      if (!(event.target instanceof Node)) return;
+      if (!tradeMenu.current?.contains(event.target)) setTradeOpen(false);
+      if (!navigation.current?.contains(event.target)) setMenuOpen(false);
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setMenuOpen(false); setTradeOpen(false); menuButton.current?.focus(); }
+      if (event.key !== "Escape") return;
+      if (tradeOpen) {
+        setTradeOpen(false);
+        tradeTrigger.current?.focus();
+      } else {
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }
     };
     const desktop = window.matchMedia("(min-width: 801px)");
-    const resize = () => { if (desktop.matches) setMenuOpen(false); };
+    const resize = () => { setTradeOpen(false); setMenuOpen(false); };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", escape);
     desktop.addEventListener("change", resize);
@@ -38,7 +49,7 @@ export function Navbar() {
       document.removeEventListener("keydown", escape);
       desktop.removeEventListener("change", resize);
     };
-  }, [menuOpen]);
+  }, [menuOpen, tradeOpen]);
   return (
     <header className="exchange-header">
       <nav ref={navigation} aria-label="Main navigation" className="exchange-nav">
@@ -49,21 +60,26 @@ export function Navbar() {
         </Link>
 
         <div id="primary-navigation-links" className="nav-links" data-open={menuOpen}>
-          <details
+          <div
+            ref={tradeMenu}
             className="trade-menu"
-            open={tradeOpen}
-            onToggle={event => setTradeOpen(event.currentTarget.open)}
-            onMouseEnter={() => setTradeOpen(true)}
-            onMouseLeave={() => setTradeOpen(false)}
-            onFocus={() => setTradeOpen(true)}
+            onPointerEnter={event => {
+              if (event.pointerType === "mouse" && window.matchMedia("(min-width: 801px)").matches) setTradeOpen(true);
+            }}
+            onPointerLeave={event => {
+              if (event.pointerType === "mouse" && !event.currentTarget.contains(document.activeElement)) setTradeOpen(false);
+            }}
             onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setTradeOpen(false); }}
           >
-            <summary className="trade-trigger" aria-haspopup="true" aria-expanded={tradeOpen}>Trade <Chevron /></summary>
-            <div className="trade-options">
+            <button ref={tradeTrigger} type="button" className="trade-trigger" aria-expanded={tradeOpen}
+              aria-controls="trade-options" onClick={() => setTradeOpen(open => !open)}>
+              Trade <Chevron />
+            </button>
+            <div id="trade-options" className="trade-options" hidden={!tradeOpen}>
               <Link href="/" aria-current={pathname === "/" ? "page" : undefined} onClick={() => { setMenuOpen(false); setTradeOpen(false); }}>Swap <span aria-hidden="true">↗</span></Link>
               <Link href="/liquidity" aria-current={pathname === "/liquidity" ? "page" : undefined} onClick={() => { setMenuOpen(false); setTradeOpen(false); }}>Liquidity <span aria-hidden="true">↗</span></Link>
             </div>
-          </details>
+          </div>
           <button className="nav-link" disabled title="Coming soon">Profile</button>
         </div>
 
@@ -72,7 +88,7 @@ export function Navbar() {
             <TokenLogo symbol="QMS" className="network-mark" />
           </span>
           <ThemeToggle />
-          <button ref={menuButton} type="button" className="mobile-menu-button" aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls="primary-navigation-links" onClick={() => setMenuOpen(open => !open)}>
+          <button ref={menuButton} type="button" className="mobile-menu-button" aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls="primary-navigation-links" onClick={() => { setTradeOpen(false); setMenuOpen(open => !open); }}>
             <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d={menuOpen ? "m6 6 12 12M6 18 18 6" : "M4 6h16M4 12h16M4 18h16"} />
             </svg>

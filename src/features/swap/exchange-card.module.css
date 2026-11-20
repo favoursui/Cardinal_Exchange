@@ -51,7 +51,7 @@
 .routeStatus { font-size: 10px; color: var(--theme-muted, #9292a2); }
 .routeCard { position: relative; margin-top: 17px; border: 1px solid var(--theme-border, #315584); border-radius: 5px; background: var(--background); padding: 15px 9px 9px; }
 .routeSummary { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
-.routeSummary strong { font-weight: 500; }
+.routeSummary strong { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
 .routeSummary > span { color: var(--theme-muted, #b7c0cc); }
 .routeCard > p { margin-top: 5px; color: var(--theme-muted, #a5afbd); font-size: 10px; }
 .routePath { display: flex; align-items: center; gap: 5px; padding-top: 12px; margin-top: 10px; border-top: 1px solid #ffffff06; }
@@ -77,10 +77,10 @@
 .saveButton { cursor: pointer; }
 @media (max-width: 380px) { .card { padding: 12px; } .routePath { gap: 3px; } .routeToken, .routeVenue { padding: 4px; font-size: 9px; } }
 
-.bestReturnTag { position: absolute; top: -13px; left: -1px; display: inline-flex; align-items: center; min-height: 20px; padding: 2px 5px; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 500; line-height: 14px; white-space: nowrap; }
+.bestReturnTag { position: absolute; top: -13px; left: -1px; display: inline-flex; align-items: center; min-height: 20px; padding: 2px 5px; border: 1px solid var(--button-primary); border-radius: 4px; background: var(--button-primary); color: var(--background-dark); font-size: 10px; font-weight: 500; line-height: 14px; white-space: nowrap; }
 
 .tokenDialog { margin: auto; padding: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--theme-border, #2a3038); border-radius: 9px; background: var(--theme-surface, #191f27); color: var(--theme-text, #f0f1f4); box-shadow: 0 22px 80px #0006; }
-.tokenDialog::backdrop { background: #080d12bb; backdrop-filter: blur(4px); }
+.tokenDialog::backdrop { background: #08120ebb; backdrop-filter: blur(4px); }
 .tokenDialogHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 16px 18px; }
 .tokenDialogHeader h2 { font-size: 20px; font-weight: 400; }
 .tokenDialogClose { display: grid; place-items: center; width: 28px; height: 28px; color: var(--theme-text, #e6edf8); border-radius: 4px; cursor: pointer; }
@@ -93,7 +93,7 @@
 .tokenListHeading { margin: 0 20px 10px; color: var(--theme-muted, #94a3b8); font-size: 13px; }
 .tokenList { display: grid; gap: 8px; margin: 0; padding: 0 20px 20px; list-style: none; }
 .tokenOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 13px; border: 1px solid var(--theme-border, #3e4959); border-radius: 4px; background: var(--theme-inset, #242b35); text-align: left; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, scale 140ms ease; }
-.tokenOption:hover { background: var(--theme-inset, #2b3441); border-color: var(--theme-border, #65778e); }
+.tokenOption:hover { background: color-mix(in srgb, var(--theme-inset), var(--accent) 8%); border-color: var(--accent); }
 .tokenOption[aria-pressed="true"] { border-color: var(--accent); }
 .tokenOption:focus-visible { outline-offset: 2px; }
 .tokenOption > .tokenMark { width: 34px; height: 34px; font-size: 24px; font-weight: 400; }
@@ -142,7 +142,7 @@
 .gasValue { max-width: 45%; text-align: right; overflow-wrap: anywhere; }
 
 .routeChoiceIdentity { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
-.routeChoiceBest { padding: 3px 5px; border-radius: 3px; background: var(--accent); color: white; font-size: 9px; white-space: nowrap; }
+.routeChoiceBest { padding: 3px 5px; border-radius: 3px; background: var(--button-primary); color: var(--background-dark); font-size: 9px; white-space: nowrap; }
 .routeChoiceAmount { margin-left: auto; text-align: right; overflow-wrap: anywhere; min-width: 0; }
 
 .switchIcon { display: flex; transition: transform 250ms ease; }

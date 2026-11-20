@@ -7,7 +7,7 @@
 .pill input { width: 35px; min-width: 0; background: transparent; color: inherit; text-align: right; font-size: 14px; outline-offset: 2px; }
 .deadline input { width: 28px; color: var(--theme-text, #fafafa); }
 .auto { border-radius: 999px; padding: 2px 7px; font-size: 12px; font-weight: 600; color: var(--theme-muted, #aaa); cursor: pointer; }
-.auto[aria-pressed="true"] { color: var(--accent); background: #2b6cf218; }
+.auto[aria-pressed="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .options { cursor: pointer; text-align: left; }
 .optionValue { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--theme-muted, #aaa); }
 .reset { width: 100%; padding: 9px; border-radius: 8px; background: var(--theme-inset, #262626); color: var(--accent); cursor: pointer; }

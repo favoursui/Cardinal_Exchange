@@ -2,9 +2,16 @@
 
 :root {
   color-scheme: dark;
-  --background: #101c1b;
+  --background-dark: #101c1b;
+  --background: var(--background-dark);
   --foreground: #f6f7f9;
-  --accent: #2b6cf2;
+  --accent: var(--button-primary);
+  accent-color: var(--accent);
+  --theme-surface: #142320;
+  --theme-inset: #20332e;
+  --theme-text: var(--foreground);
+  --theme-muted: #a2b5ad;
+  --theme-border: #344b42;
   --button-primary: #82f5df;
   --button-primary-hover: #70ebd4;
   --button-primary-text: #10201d;
@@ -29,8 +36,7 @@ a { text-decoration: none; }
 .trade-menu { position: relative; }
 .trade-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 12px; background: transparent; color: var(--theme-muted, #7f94af); border-bottom: 2px solid transparent; border-radius: 0; font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
 .trade-menu:has([aria-current="page"]) > .trade-trigger, .nav-link[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
-.trade-trigger::-webkit-details-marker { display: none; }
-.trade-menu[open] .trade-trigger svg { transform: rotate(180deg); }
+.trade-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
 .trade-options { position: absolute; top: 100%; left: 0; z-index: 20; width: 200px; padding: 7px; background: transparent; border: 1px solid rgb(202 232 222 / 16%); border-radius: 14px; -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 16px 40px rgb(0 0 0 / 28%), inset 0 1px rgb(255 255 255 / 5%); }
 .trade-options a, .trade-options button { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 12px; border-radius: 9px; font-size: 14px; color: var(--theme-muted, #bdcbe0); }
 .trade-options a:hover { background: rgb(202 232 222 / 10%); color: #82f5df; }
@@ -52,7 +58,7 @@ a { text-decoration: none; }
   .settings-button, .settings-button > svg { transition: none; }
   .settings-button:hover, .settings-button:hover > svg { transform: none; }
 }
-.wallet-button { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 17px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.wallet-button { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 17px; border-radius: 999px; background: var(--button-primary); color: var(--button-primary-text); font-size: 14px; font-weight: 700; white-space: nowrap; }
 .mobile-menu-button { display: none; }
 @media (max-width: 800px) {
   .exchange-nav { padding: 16px; gap: 16px; }
@@ -88,6 +94,7 @@ html:has(dialog[open]) { overflow: hidden; }
 
 :root[data-theme="light"] {
   color-scheme: light;
+  --accent: #216957;
   --background: #f7f5f0;
   --foreground: #202733;
   --theme-surface: #fffdf9;

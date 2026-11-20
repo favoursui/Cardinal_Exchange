@@ -9,7 +9,7 @@ import { tokenMetadata, type Token } from "@/lib/config/tokens";
 import styles from "./analytics.module.css";
 
 type Snapshot = { pools: LiquidityPool[]; checkedAt: string; partial: boolean; failures: number; configured: boolean };
-type UsersMetric = { status: "indexing" | "ready" | "unavailable"; totalUsers: string | null };
+type UsersMetric = { status: "indexing" | "ready" | "unavailable"; totalUsers: string | null; block?: string };
 const amount = (raw: string, decimals: number) => {
   const value = BigInt(raw), scale = BigInt(10) ** BigInt(decimals);
   const whole = value / scale;
@@ -104,6 +104,7 @@ export function AnalyticsDashboard() {
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    let timer: number | undefined;
     const refreshUsers = async () => {
       try {
         const data = object(await api("/v1/analytics/users", undefined, controller.signal));
@@ -112,14 +113,24 @@ export function AnalyticsDashboard() {
           !(data.totalUsers === null || (typeof data.totalUsers === "string" && /^(0|[1-9][0-9]{0,30})$/.test(data.totalUsers)))) {
           throw new Error("Invalid analytics response.");
         }
-        if (active) setUsersMetric({ status: data.status as UsersMetric["status"], totalUsers: data.totalUsers as string | null });
+        const metric: UsersMetric = { status: data.status as UsersMetric["status"], totalUsers: data.totalUsers };
+        if (metric.status === "ready") {
+          const blocks = Object.values(object(data.indexedThrough));
+          if (metric.totalUsers === null || !blocks.length ||
+              !blocks.every((block): block is string => typeof block === "string" && /^[0-9]+$/.test(block))) {
+            throw new Error("Invalid analytics checkpoint.");
+          }
+          metric.block = blocks.reduce((a, b) => BigInt(a) < BigInt(b) ? a : b);
+        }
+        if (active) setUsersMetric(metric);
       } catch {
         if (active && !controller.signal.aborted) setUsersMetric({ status: "unavailable", totalUsers: null });
+      } finally {
+        if (active) timer = window.setTimeout(refreshUsers, 30_000);
       }
     };
     void refreshUsers();
-    const interval = window.setInterval(() => { void refreshUsers(); }, 30_000);
-    return () => { active = false; controller.abort(); window.clearInterval(interval); };
+    return () => { active = false; controller.abort(); window.clearTimeout(timer); };
   }, [revision]);
 
   const pools = snapshot?.pools ?? [];
@@ -168,7 +179,7 @@ export function AnalyticsDashboard() {
         label="Total Users"
         value={usersMetric.status === "ready" && usersMetric.totalUsers !== null
           ? new Intl.NumberFormat("en-US").format(BigInt(usersMetric.totalUsers)) : "—"}
-        detail={usersMetric.status === "ready" ? "Unique swap and LP wallets" : usersMetric.status === "indexing" ? "Indexing confirmed swap and LP history" : "Analytics unavailable"}
+        detail={usersMetric.status === "ready" ? `Unique wallets through block ${usersMetric.block}` : usersMetric.status === "indexing" ? "Indexing confirmed swap and LP history" : "Analytics unavailable"}
       />
       <AllTimeMetric label="Total Volume" />
       <AllTimeMetric label="Total Deposits (All Time)" />

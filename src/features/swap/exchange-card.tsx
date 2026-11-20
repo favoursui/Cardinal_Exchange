@@ -28,6 +28,16 @@ function Icon({ name }: { name: IconName }) {
   return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
 
+const venueLogos: Readonly<Partial<Record<string, string>>> = {
+  cadinal: "/images/cadinal.svg",
+  qwap: "/images/qwap.jpg",
+};
+
+function VenueLogo({ venue }: { venue: string }) {
+  const src = venueLogos[venue];
+  return src ? <Image src={src} alt="" width={18} height={18} className={styles.venueLogo} /> : null;
+}
+
 function TokenMark({ token }: { token: Token }) {
   return <TokenLogo symbol={token} className={styles.tokenMark} />;
 }
@@ -210,19 +220,19 @@ export function ExchangeCard() {
         <div className={styles.routeHeading}><span>Swap route</span><span className={styles.routeStatus} role="status">{route.status}</span></div>
         <div className={styles.routeCard}>
           {route.quote && route.best && <span className={styles.bestReturnTag}>Best Return</span>}
-          <div className={styles.routeSummary}><strong>{route.quote ? routeName : "Find your best route"}</strong><span>{route.quote ? estimatedOutput : "—"} {outputToken}</span></div>
+          <div className={styles.routeSummary}><strong><VenueLogo venue={route.quote.venue} />{routeName}</strong><span>{route.quote ? estimatedOutput : "—"} {outputToken}</span></div>
           <div className={styles.routeDetails}><span>{currentGas ? `${currentGas.approval ? "Approval gas budget" : "Gas budget"}: ${Number(currentGas.amount) < 0.01 ? "< 0.01" : currentGas.amount} QMS` : "Gas budget: —"}</span></div>
           {route.quote && <p>Minimum receive: {displayUnits(route.quote.minimumAmountOut, tokenMetadata[outputToken].decimals)} {outputToken}</p>}
           <div className={styles.routePath} aria-label={`${inputToken} through ${routeName} to ${outputToken}`}>
             <span className={styles.routeToken}><TokenMark token={inputToken} />{inputToken}</span>
             <span aria-hidden="true" className={styles.arrow}>⟶</span>
-            <span className={styles.routeVenue}>{route.quote?.venue === "qwap" && <Image src="/images/qwap.jpg" alt="" width={18} height={18} className={styles.venueLogo} />}{routeName}</span>
+            <span className={styles.routeVenue}><VenueLogo venue={route.quote.venue} />{routeName}</span>
             <span aria-hidden="true" className={styles.arrow}>⟶</span>
             <span className={styles.routeToken}><TokenMark token={outputToken} />{outputToken}</span>
           </div>
         </div>
         <div className={styles.routeFooter}><span>Slippage: {slippage}%</span><button disabled={!route.quotes.length} type="button" aria-expanded={routesOpen} onClick={() => setOpenRoutesKey(routesOpen ? null : routesKey)}>{routesOpen ? "Hide routes" : "See all routes"} <span aria-hidden="true">›</span></button></div>
-        {routesOpen && <div className={styles.routeChoices}>{route.quotes.map((quote, index) => <button key={quote.quoteId} type="button" aria-pressed={route.quote?.quoteId === quote.quoteId} onClick={() => { route.select(quote.venue); setOpenRoutesKey(null); }}><span className={styles.routeChoiceIdentity}>{quote.venue === "qwap" && <Image src="/images/qwap.jpg" alt="" width={18} height={18} className={styles.venueLogo} />}<span>{quote.venueName}</span>{index === 0 && <span className={styles.routeChoiceBest}>Best Return</span>}</span><span className={styles.routeChoiceAmount}>{displayUnits(quote.amountOut, tokenMetadata[outputToken].decimals)} {outputToken}</span></button>)}</div>}
+        {routesOpen && <div className={styles.routeChoices}>{route.quotes.map((quote, index) => <button key={quote.quoteId} type="button" aria-pressed={route.quote?.quoteId === quote.quoteId} onClick={() => { route.select(quote.venue); setOpenRoutesKey(null); }}><span className={styles.routeChoiceIdentity}><VenueLogo venue={quote.venue} /><span>{quote.venueName}</span>{index === 0 && <span className={styles.routeChoiceBest}>Best Return</span>}</span><span className={styles.routeChoiceAmount}>{displayUnits(quote.amountOut, tokenMetadata[outputToken].decimals)} {outputToken}</span></button>)}</div>}
       </div> : null}
 
       {maxError && <p role="alert">{maxError}</p>}
