@@ -42,6 +42,28 @@ function ReserveBars({ pools }: { pools: LiquidityPool[] }) {
 }
 
 type ChartMode = "bars" | "line" | "area";
+function ChartIcon({ kind }: { kind: ChartMode | "calendar" }) {
+  const drawing = {
+    bars: <path d="M3 3v14h14M7 13V8m4 5V4m4 9v-3" />,
+    area: <path d="M3 3v14h14M5.5 13c1.5-4 3-6 5-4s3.5 3 6-4" />,
+    line: <path d="m2.5 14 5.5-5.5 3.5 3.5 6-7M13 5h4.5v4.5" />,
+    calendar: <><rect x="3" y="4" width="14" height="13" rx="2" /><path d="M6.5 2.5v3M13.5 2.5v3M3 8h14M6.5 11h1m2 0h1m2 0h1m-7 3h1m2 0h1" /></>,
+  };
+  return <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{drawing[kind]}</svg>;
+}
+
+function ChartTypeButtons({ mode, onChange }: { mode?: ChartMode; onChange?: (mode: ChartMode) => void }) {
+  return <div className={styles.chartTypes} role="group" aria-label="Chart type">
+    {(["bars", "area", "line"] as const).map(kind => {
+      const label = { bars: "Bar chart", area: "Area chart", line: "Line chart" }[kind];
+      return <button key={kind} type="button" aria-label={label} aria-pressed={mode === kind}
+        title={onChange ? label : "Historical activity is unavailable"} disabled={!onChange} onClick={() => onChange?.(kind)}>
+        <ChartIcon kind={kind} />
+      </button>;
+    })}
+  </div>;
+}
+
 function PoolChart({ pools, mode }: { pools: LiquidityPool[]; mode: ChartMode }) {
   if (!pools.length) return <div className={styles.emptyChart}>No active pools to chart yet.</div>;
   const values = pools.map(pool => Number(pool.totalSupply));
@@ -73,7 +95,7 @@ export function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
-  const [chartMode, setChartMode] = useState<ChartMode>("area");
+  const [chartMode, setChartMode] = useState<ChartMode>("bars");
   const load = useCallback(async (signal: AbortSignal) => {
     setLoading(true); setError("");
     try {
@@ -145,14 +167,10 @@ export function AnalyticsDashboard() {
     <section className={styles.overview}>
       <article className={styles.panel + " " + styles.featurePanel}>
         <div className={styles.panelTitle}><div><p>CADINAL LIQUIDITY</p><h2>Pool distribution</h2></div><div className={styles.chartControls}>
-          <div className={styles.chartTypes} aria-label="Chart type">
-            <button type="button" aria-label="Bar chart" aria-pressed={chartMode === "bars"} onClick={() => setChartMode("bars")} title="Bar chart">▥</button>
-            <button type="button" aria-label="Line chart" aria-pressed={chartMode === "line"} onClick={() => setChartMode("line")} title="Line chart">⌁</button>
-            <button type="button" aria-label="Area chart" aria-pressed={chartMode === "area"} onClick={() => setChartMode("area")} title="Area chart">⌁̲</button>
-          </div>
+          <ChartTypeButtons mode={chartMode} onChange={setChartMode} />
           <div className={styles.periods} aria-label="Time range (historical data unavailable)">
             {["1D", "7D", "1M", "3M", "1Y"].map(period => <button type="button" key={period} disabled title="Historical pool snapshots are not available yet">{period}</button>)}
-            <button type="button" disabled aria-label="Choose date range" title="Historical pool snapshots are not available yet">▦</button>
+            <button type="button" disabled aria-label="Choose date range" title="Historical pool snapshots are not available yet"><ChartIcon kind="calendar" /></button>
           </div>
           <button className={styles.refresh} onClick={refresh} disabled={loading} aria-label="Refresh analytics" title="Refresh live snapshot">{loading ? "◌" : "↻"}</button>
         </div></div>
@@ -286,9 +304,8 @@ function DailyUsersCard() {
     <div className={styles.growthHeading}><h2>Daily Active Users</h2></div>
     <div className={styles.dailyLegend}><span><i />Daily active users</span></div>
     <div className={styles.activityToolbar}>
-      <div className={styles.chartTypes} aria-label="Chart type">
-        <button type="button" disabled title="Historical activity is unavailable">▥</button><button type="button" disabled title="Historical activity is unavailable">⌁</button><button type="button" disabled title="Historical activity is unavailable">↗</button>
-      </div><DisabledPeriodFilters />
+      <ChartTypeButtons />
+      <DisabledPeriodFilters />
     </div>
     <ActivityEmptyChart message="Active wallet history is not indexed yet" />
   </article>;
