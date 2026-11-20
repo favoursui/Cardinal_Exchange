@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { TokenLogo } from "@/components/ui/token-logo";
 import { api, object } from "@/features/trading/api";
 import { parseCatalog, type LiquidityPool } from "@/features/liquidity/data";
-import { tokenMetadata, type Token } from "@/lib/config/tokens";
+import { tokenMetadata } from "@/lib/config/tokens";
 import styles from "./analytics.module.css";
 
 type Snapshot = { pools: LiquidityPool[]; checkedAt: string; partial: boolean; failures: number; configured: boolean };
@@ -19,26 +19,19 @@ const amount = (raw: string, decimals: number) => {
 };
 const shortAddress = (address: string) => address.slice(0, 8) + "…" + address.slice(-6);
 
-function ReserveBars({ pools }: { pools: LiquidityPool[] }) {
-  const totals = useMemo(() => {
-    const result = new Map<Token, number>();
-    for (const pool of pools) {
-      result.set(pool.tokenA, (result.get(pool.tokenA) ?? 0) + Number(pool.reserveA) / 10 ** tokenMetadata[pool.tokenA].decimals);
-      result.set(pool.tokenB, (result.get(pool.tokenB) ?? 0) + Number(pool.reserveB) / 10 ** tokenMetadata[pool.tokenB].decimals);
-    }
-    return [...result].sort((a, b) => b[1] - a[1]);
-  }, [pools]);
-  const max = Math.max(1, ...totals.map(([, value]) => value));
-  if (!totals.length) return <div className={styles.emptyChart}>No active pool reserves were returned.</div>;
-  return <div className={styles.reserveBars}>
-    <div className={styles.chartCaption}><span>Relative amount · each token in its own units</span><span>NOW</span></div>
-    {totals.map(([token, value]) => <div className={styles.reserveRow} key={token}>
-      <div className={styles.asset}><TokenLogo symbol={token} /><b>{token}</b></div>
-      <div className={styles.track}><i style={{ width: Math.max(2, value / max * 100) + "%" }} /></div>
-      <strong>{new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(value)} <small>{token}</small></strong>
-    </div>)}
-    <p className={styles.note}>Bars compare relative quantities. Assets are not converted to USD and amounts across different tokens are not directly comparable.</p>
-  </div>;
+const transactionRanges = ["24H", "7D", "30D", "90D", "1Y", "ALL"] as const;
+
+function TransactionsCard() {
+  const [range, setRange] = useState<(typeof transactionRanges)[number]>("24H");
+  return <article className={styles.panel + " " + styles.transactionsPanel}>
+    <header className={styles.volumeHeader}>
+      <h2 className={styles.transactionTitle}><svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"><path d="M2 6h15l-3-3m3 3-3 3M18 14H3l3-3m-3 3 3 3" /></svg>Transactions</h2>
+      <div className={styles.periods} role="group" aria-label="Transaction time range">
+        {transactionRanges.map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}
+      </div>
+    </header>
+    <div className={styles.emptyChart} role="status">Transaction history not indexed yet · {range}</div>
+  </article>;
 }
 
 const feePeriods = ["24h", "7d", "30d"] as const;
@@ -160,7 +153,6 @@ export function AnalyticsDashboard() {
   }, [revision]);
 
   const pools = snapshot?.pools ?? [];
-  const active = pools.filter(pool => BigInt(pool.totalSupply) > BigInt(0));
   const refresh = () => setRevision(value => value + 1);
 
   return <div className={styles.dashboard}>
@@ -224,16 +216,20 @@ export function AnalyticsDashboard() {
             <small>Fees not indexed yet</small>
           </article>
         </div>
-        <article className={styles.panel + " " + styles.reservePanel}>
-          <PanelTitle eyebrow="CURRENT RESERVES" title="Assets held in pools" badge="ONCHAIN" />
-          {active.length ? <ReserveBars pools={active} /> : <div className={styles.emptyChart}>{loading ? "Reading Cadinal pools…" : "No active pool reserves were returned."}</div>}
-        </article>
+        <TransactionsCard />
       </div>
     </section>
-    <p className={styles.dataCaveat}>This is a live pool snapshot. Historical trading volume, open interest, revenue, and USD valuations need additional indexing and price data.</p>
 
     <Section title="All-Time" />
-    <section className={styles.allTime} aria-label="All-time analytics">
+    <section className={styles.allTime} aria-labelledby="all-time-statistics">
+      <div className={styles.allTimeMetric}>
+        <h2 id="all-time-statistics" className={styles.allTimeTitle}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M1 10h3v5H1zm5-4h3v9H6zm5-4h3v13h-3z" />
+          </svg>
+          All-Time Statistics
+        </h2>
+      </div>
       <AllTimeMetric
         label="Total Users"
         value={usersMetric.status === "ready" && usersMetric.totalUsers !== null
@@ -243,8 +239,8 @@ export function AnalyticsDashboard() {
       <AllTimeMetric label="Total Volume" />
       <AllTimeMetric label="Total Deposits (All Time)" />
       <AllTimeMetric label="Total Withdrawals (All Time)" />
+      <div className={styles.allTimeMetric} aria-hidden="true" />
     </section>
-    <Section title="Volume & Open Interest" />
     <Section title="User Growth" />
     <section className={styles.growthGrid} aria-label="User growth analytics">
       <GrowthCard title="Unique Traders by Asset" legends={["WQMS", "USDC", "WETH", "WBTC", "USDT", "Total unique traders"]} />
