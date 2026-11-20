@@ -2,9 +2,9 @@
 @media(max-width:900px){.dashboard{padding:25px 18px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.dashboard{padding:22px 12px}.heading{align-items:flex-start}.heading h1{font-size:28px}.subtitle{max-width:270px;line-height:1.5}.refresh{padding:0 10px}.metrics{gap:9px}.metric{min-height:100px;padding:13px}.metric>strong{font-size:24px}.metric>small{font-size:11px}.panel{padding:15px 13px}.panelTitle h2{font-size:17px}.reserveRow{grid-template-columns:76px minmax(25px,1fr);gap:9px}.reserveRow>strong{grid-column:2;margin-top:-6px}.poolChart{height:190px}.poolChart svg{height:150px}.source{gap:8px}.source>strong{font-size:9px}}
 /* Reference dashboard layout: one lead chart beside two summary cards and a wider detail card. */
-.overview{display:grid;grid-template-columns:1.03fr 1fr;gap:14px;align-items:stretch}.featurePanel{min-height:458px!important}.featureValue{display:flex;align-items:baseline;gap:9px;margin-top:13px}.featureValue strong{font-size:36px;line-height:1;font-weight:600;letter-spacing:-1px}.featureValue span{color:#879b95;font-size:14px}.featurePanel .poolChart{height:340px;margin-top:19px}.featurePanel .poolChart svg{height:300px}.sideOverview{display:grid;grid-template-rows:166px minmax(278px,1fr);gap:14px}.miniMetrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}.miniMetric{min-width:0;padding:18px;border:1px solid #253b36;border-radius:10px;background:linear-gradient(145deg,#122320,#101e1c 65%,#10201d)}.miniMetric>span{display:block;color:#879b95;font-size:13px}.miniMetric>strong{display:block;margin-top:7px;font-size:30px;line-height:1.1;font-weight:600;letter-spacing:-.6px}.miniMetric>small{display:block;margin-top:8px;color:#51c6a5;font-size:12px}.reservePanel{min-height:278px!important}.reservePanel .reserveBars{margin-top:15px}.reservePanel .chartCaption{margin:12px 0 8px}.reservePanel .reserveRow{margin:11px 0;grid-template-columns:76px minmax(30px,1fr) minmax(105px,auto);gap:9px}.reservePanel .note{margin-top:10px}.dataCaveat{margin:10px 2px 0;color:#738b83;font-size:12px;line-height:1.5}
+.overview{display:grid;grid-template-columns:1.03fr 1fr;gap:14px;align-items:stretch}.featurePanel{min-height:458px!important}.featureValue{display:flex;align-items:baseline;gap:9px;margin-top:13px}.featureValue strong{font-size:36px;line-height:1;font-weight:600;letter-spacing:-1px}.featureValue span{color:#879b95;font-size:14px}.featurePanel .poolChart{height:340px;margin-top:19px}.featurePanel .poolChart svg{height:300px}.sideOverview{display:grid;grid-template-rows:166px minmax(278px,1fr);gap:14px}.miniMetrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}.miniMetric{min-width:0;padding:18px;border:1px solid #253b36;border-radius:10px;background:linear-gradient(145deg,#122320,#101e1c 65%,#10201d)}.miniMetric>span{display:block;color:#879b95;font-size:13px}.miniMetric>strong{display:block;margin-top:4px;font-size:30px;line-height:1.1;font-weight:600;letter-spacing:-.6px}.miniMetric>small{display:block;margin-top:4px;color:#51c6a5;font-size:12px}.reservePanel{min-height:278px!important}.reservePanel .reserveBars{margin-top:15px}.reservePanel .chartCaption{margin:12px 0 8px}.reservePanel .reserveRow{margin:11px 0;grid-template-columns:76px minmax(30px,1fr) minmax(105px,auto);gap:9px}.reservePanel .note{margin-top:10px}.dataCaveat{margin:10px 2px 0;color:#738b83;font-size:12px;line-height:1.5}
 @media(max-width:900px){.overview{grid-template-columns:1fr}.featurePanel{min-height:400px!important}.featurePanel .poolChart{height:290px}.featurePanel .poolChart svg{height:250px}.sideOverview{grid-template-rows:150px auto}.reservePanel{min-height:260px!important}}
-@media(max-width:520px){.featurePanel{min-height:360px!important}.featurePanel .poolChart{height:255px}.featurePanel .poolChart svg{height:215px}.sideOverview{grid-template-rows:130px auto;gap:9px}.miniMetrics{gap:9px}.miniMetric{padding:13px}.miniMetric>strong{font-size:26px}.miniMetric>small{font-size:11px}.reservePanel .reserveRow{grid-template-columns:68px minmax(22px,1fr)}.reservePanel .reserveRow>strong{grid-column:2;margin-top:-5px}}
+@media(max-width:520px){.featurePanel{min-height:360px!important}.featurePanel .poolChart{height:255px}.featurePanel .poolChart svg{height:215px}.sideOverview{grid-template-rows:max-content auto;gap:9px}.miniMetrics{gap:9px}.miniMetric{padding:13px}.miniMetric>strong{font-size:26px}.miniMetric>small{font-size:11px}.reservePanel .reserveRow{grid-template-columns:68px minmax(22px,1fr)}.reservePanel .reserveRow>strong{grid-column:2;margin-top:-5px}}
 .chartControls { display: flex; align-items: center; gap: 8px; }
 .chartTypes, .periods { display: inline-flex; align-items: center; padding-inline: 2px; border: 1px solid #263a35; border-radius: 10px; background: #10201d; }
 .chartTypes button, .periods button { position: relative; display: grid; place-items: center; min-width: 29px; height: 32px; padding: 0 4px; border: 0; background: transparent; color: #94a29d; font: inherit; font-size: 12px; cursor: pointer; }
@@ -27,14 +27,13 @@
 @media(max-width:520px){.activityCard{min-height:410px;padding:16px 13px}.tradeLegends{gap:6px}.tradeLegends>span,.tradeLegends>button{padding:5px 6px;font-size:10px}.activityCard .growthChart{height:225px}.activityToolbar{min-height:47px}.activityToolbar .growthPeriods button{width:21px}}
 .slippageControls{display:grid;gap:12px;justify-items:center;margin:18px 0 4px}.slippageControls>div:first-child{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}.slippageControls>div:first-child button{padding:6px 10px;border:1px solid transparent;border-radius:4px;color:#8da49d;background:transparent;font-size:12px}.slippageControls>div:first-child button[aria-pressed=true]{border-color:#4f9c86;color:#57bba0}.slippageControls button:disabled{cursor:not-allowed}.slippageControls .tradeLegends{gap:7px}.activityCard .slippageControls+.activityToolbar{min-height:48px}.topUsersCard{display:flex;flex-direction:column}.usersTable{display:flex;flex:1;flex-direction:column;margin-top:20px}.usersTableHead{display:grid;grid-template-columns:1fr 1fr;padding:0 16px 12px;border-bottom:1px solid #53605b;color:#8f9a96;font-size:11px}.usersTableHead span:last-child{text-align:left}.usersEmpty{display:grid;flex:1;min-height:220px;place-items:center;border-bottom:1px solid #2c4039;color:#71877f;text-align:center;font-size:13px}.usersTableFoot{display:flex;justify-content:space-between;align-items:center;padding-top:13px;color:#71877f;font-size:11px}.usersTableFoot>div{display:flex;align-items:center;gap:7px}.usersTableFoot button,.usersTableFoot>div>span{display:grid;place-items:center;min-width:31px;height:30px;border:1px solid #2b4039;border-radius:7px;color:#758880;background:transparent}.usersTableFoot button:disabled{opacity:.5}
 @media(max-width:520px){.slippageControls>div:first-child{gap:3px}.slippageControls>div:first-child button{padding:5px 6px;font-size:11px}.usersTableHead{padding-left:8px;padding-right:8px}.usersTableFoot{gap:8px;font-size:10px}}
-.miniMetrics{grid-template-columns:repeat(3,minmax(0,1fr))}.miniMetric{padding:15px 13px}.miniMetric>strong{font-size:27px}
-@media(max-width:520px){.miniMetrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.miniMetric{padding:11px 8px}.miniMetric>span{font-size:11px}.miniMetric>strong{font-size:22px}.miniMetric>small{font-size:10px}}
-.emptyMiniMetric{min-height:100%;pointer-events:none}
+.miniMetrics{grid-template-columns:repeat(4,minmax(0,1fr))}.miniMetric{padding:10px 13px}.miniMetric>strong{font-size:27px}
+@media(max-width:520px){.miniMetrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.miniMetric{padding:8px}.miniMetric>span{font-size:11px}.miniMetric>strong{font-size:22px}.miniMetric>small{font-size:10px}}
 
 /* Compact dashboard cards while preserving enough room for chart controls. */
-.featurePanel{min-height:380px!important}.featurePanel .poolChart{height:265px}.featurePanel .poolChart svg{height:225px}.sideOverview{grid-template-rows:138px minmax(220px,1fr)}.reservePanel{min-height:220px!important}.growthCard{min-height:350px}.growthChart{height:205px}.activityCard{min-height:390px}.activityCard .growthChart{height:215px}.usersEmpty{min-height:165px}
-@media(max-width:900px){.featurePanel{min-height:350px!important}.featurePanel .poolChart{height:235px}.featurePanel .poolChart svg{height:195px}.sideOverview{grid-template-rows:130px auto}.reservePanel{min-height:230px!important}}
-@media(max-width:520px){.featurePanel{min-height:320px!important}.featurePanel .poolChart{height:205px}.featurePanel .poolChart svg{height:165px}.sideOverview{grid-template-rows:120px auto}.reservePanel{min-height:210px!important}.growthCard{min-height:310px}.growthChart{height:180px}.activityCard{min-height:340px}.activityCard .growthChart{height:185px}.usersEmpty{min-height:140px}}
+.featurePanel{min-height:380px!important}.featurePanel .poolChart{height:265px}.featurePanel .poolChart svg{height:225px}.sideOverview{grid-template-rows:max-content minmax(220px,1fr)}.reservePanel{min-height:220px!important}.growthCard{min-height:350px}.growthChart{height:205px}.activityCard{min-height:390px}.activityCard .growthChart{height:215px}.usersEmpty{min-height:165px}
+@media(max-width:900px){.featurePanel{min-height:350px!important}.featurePanel .poolChart{height:235px}.featurePanel .poolChart svg{height:195px}.sideOverview{grid-template-rows:max-content auto}.reservePanel{min-height:230px!important}}
+@media(max-width:520px){.featurePanel{min-height:320px!important}.featurePanel .poolChart{height:205px}.featurePanel .poolChart svg{height:165px}.sideOverview{grid-template-rows:max-content auto}.reservePanel{min-height:210px!important}.growthCard{min-height:310px}.growthChart{height:180px}.activityCard{min-height:340px}.activityCard .growthChart{height:185px}.usersEmpty{min-height:140px}}
 
 
 :global(:root[data-theme="light"]) .page{background:var(--background);color:var(--foreground)}
@@ -71,3 +70,42 @@
 :global(:root[data-theme="light"]) .miniMetric>span{color:#586779}
 :global(:root[data-theme="light"]) .panelTitle>span{border-color:#b6ded1;background:#e8f5ef;color:#287764}
 :global(:root[data-theme="light"]) .refresh:hover{color:#287764}
+
+.miniMetric > .metricLabel { display: flex; align-items: center; gap: 6px; }
+.metricLabel svg { flex: none; }
+
+.feeHeader { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.feeHeader .metricLabel { display: inline-flex; align-items: center; gap: 4px; color: var(--theme-muted); font-size: 12px; }
+.sideOverview { container-type: inline-size; }
+@container (max-width: 610px) {
+  .miniMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.feePeriods {
+  display: inline-flex;
+  max-width: 100%;
+  border: 1px solid var(--theme-border);
+  border-radius: 7px;
+}
+.feePeriods button {
+  padding: 2px 3px;
+  color: var(--theme-muted);
+  font-size: 11px;
+  line-height: 18px;
+  cursor: pointer;
+}
+.feePeriods button[aria-pressed="true"] {
+  color: var(--theme-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.volumePanel { display: flex; flex-direction: column; }
+.volumeHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.volumeHeader h2, .volumeChanges { color: var(--theme-muted); font-size: 13px; }
+.volumeHeader h2 { font-weight: 500; }
+.volumeChanges { display: flex; gap: 14px; margin: 6px 0 12px; }
+.volumeHeader .periods button[aria-pressed="true"] { color: var(--theme-text); text-decoration: underline; text-underline-offset: 9px; }
+.volumePlot { position: relative; flex: 1; min-height: 155px; margin-bottom: 14px; display: grid; place-content: center; text-align: center; border-block: 1px solid var(--theme-border); background: repeating-linear-gradient(to top, transparent 0 calc(25% - 1px), color-mix(in srgb, var(--theme-border) 55%, transparent) calc(25% - 1px) 25%); }
+.volumeWatermark { font: 48px Georgia, serif; opacity: .12; }
+.volumeEmpty { color: var(--theme-muted); font-size: 12px; }

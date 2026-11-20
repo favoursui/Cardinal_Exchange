@@ -41,6 +41,8 @@ function ReserveBars({ pools }: { pools: LiquidityPool[] }) {
   </div>;
 }
 
+const feePeriods = ["24h", "7d", "30d"] as const;
+
 type ChartMode = "bars" | "line" | "area";
 function ChartIcon({ kind }: { kind: ChartMode | "calendar" }) {
   const drawing = {
@@ -64,28 +66,30 @@ function ChartTypeButtons({ mode, onChange }: { mode?: ChartMode; onChange?: (mo
   </div>;
 }
 
-function PoolChart({ pools, mode }: { pools: LiquidityPool[]; mode: ChartMode }) {
-  if (!pools.length) return <div className={styles.emptyChart}>No active pools to chart yet.</div>;
-  const values = pools.map(pool => Number(pool.totalSupply));
-  const max = Math.max(...values, 1);
-  const x = (index: number) => pools.length === 1 ? 50 : 8 + index * 84 / (pools.length - 1);
-  const y = (value: number) => 82 - value / max * 66;
-  const points = values.map((value, index) => x(index) + "," + y(value)).join(" ");
-  return <div className={styles.poolChart}>
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="LP token supply by Cadinal pool">
-      <defs><linearGradient id="pool-area-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#53c6a7" stopOpacity=".35" /><stop offset="1" stopColor="#53c6a7" stopOpacity=".02" /></linearGradient></defs>
-      {[20, 40, 60, 80].map(level => <line key={level} x1="0" x2="100" y1={level} y2={level} className={styles.chartGridline} />)}
-      {mode === "area" && <polygon points={points + " 92,82 8,82"} fill="url(#pool-area-fill)" />}
-      {mode !== "bars" && <polyline points={points} className={styles.line} />}
-      {mode === "bars" && values.map((value, index) => {
-        const width = Math.min(9, 64 / values.length);
-        return <rect key={pools[index]!.address} x={x(index) - width / 2} y={y(value)} width={width} height={82 - y(value)} rx="0.7" className={styles.bar}><title>{pools[index]!.tokenA}/{pools[index]!.tokenB} LP supply</title></rect>;
-      })}
-      {mode !== "bars" && values.map((value, index) => <circle key={pools[index]!.address} cx={x(index)} cy={y(value)} r="1.1" className={styles.dot}><title>{pools[index]!.tokenA}/{pools[index]!.tokenB} LP supply</title></circle>)}
-    </svg>
-    <div className={styles.axis}><span>{pools[0]!.tokenA}/{pools[0]!.tokenB}</span><span>{pools[pools.length - 1]!.tokenA}/{pools[pools.length - 1]!.tokenB}</span></div>
-    <p className={styles.note}>LP token supply is an index for comparing pool size; LP tokens from different pairs are not equivalent.</p>
-  </div>;
+const volumeRanges = ["1D", "7D", "1M", "3M", "1Y"] as const;
+
+function VolumeCard() {
+  const [mode, setMode] = useState<ChartMode>("bars");
+  const [range, setRange] = useState<(typeof volumeRanges)[number]>("1M");
+
+  return <article className={styles.panel + " " + styles.featurePanel + " " + styles.volumePanel}>
+    <header className={styles.volumeHeader}>
+      <h2>Total Volume</h2>
+      <div className={styles.chartControls}>
+        <ChartTypeButtons mode={mode} onChange={setMode} />
+        <div className={styles.periods} role="group" aria-label="Volume time range">
+          {volumeRanges.map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}
+          <button type="button" disabled aria-label="Custom date range unavailable" title="Volume history is not indexed yet"><ChartIcon kind="calendar" /></button>
+        </div>
+      </div>
+    </header>
+    <div className={styles.featureValue}><strong aria-label="Total trading volume in USD unavailable">—</strong></div>
+    <div className={styles.volumeChanges}><span>24h —</span><span>30d —</span></div>
+    <div className={styles.volumePlot}>
+      <span aria-hidden="true" className={styles.volumeWatermark}>Cadinal</span>
+      <span className={styles.volumeEmpty} role="status">Volume history unavailable · {range}</span>
+    </div>
+  </article>;
 }
 
 export function AnalyticsDashboard() {
@@ -95,7 +99,7 @@ export function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
-  const [chartMode, setChartMode] = useState<ChartMode>("bars");
+  const [feePeriod, setFeePeriod] = useState<(typeof feePeriods)[number]>("24h");
   const load = useCallback(async (signal: AbortSignal) => {
     setLoading(true); setError("");
     try {
@@ -157,7 +161,6 @@ export function AnalyticsDashboard() {
 
   const pools = snapshot?.pools ?? [];
   const active = pools.filter(pool => BigInt(pool.totalSupply) > BigInt(0));
-  const assets = new Set(active.flatMap(pool => [pool.tokenA, pool.tokenB])).size;
   const refresh = () => setRevision(value => value + 1);
 
   return <div className={styles.dashboard}>
@@ -165,23 +168,61 @@ export function AnalyticsDashboard() {
 
     <Section title="Live market snapshot" />
     <section className={styles.overview}>
-      <article className={styles.panel + " " + styles.featurePanel}>
-        <div className={styles.panelTitle}><div><p>CADINAL LIQUIDITY</p><h2>Pool distribution</h2></div><div className={styles.chartControls}>
-          <ChartTypeButtons mode={chartMode} onChange={setChartMode} />
-          <div className={styles.periods} aria-label="Time range (historical data unavailable)">
-            {["1D", "7D", "1M", "3M", "1Y"].map(period => <button type="button" key={period} disabled title="Historical pool snapshots are not available yet">{period}</button>)}
-            <button type="button" disabled aria-label="Choose date range" title="Historical pool snapshots are not available yet"><ChartIcon kind="calendar" /></button>
-          </div>
-          <button className={styles.refresh} onClick={refresh} disabled={loading} aria-label="Refresh analytics" title="Refresh live snapshot">{loading ? "◌" : "↻"}</button>
-        </div></div>
-        <div className={styles.featureValue}><strong>{snapshot ? active.length : "—"}</strong><span>active pools</span></div>
-        <PoolChart pools={active} mode={chartMode} />
-      </article>
+      <VolumeCard />
       <div className={styles.sideOverview}>
         <div className={styles.miniMetrics}>
-          <MiniMetric label="Listed assets" value={snapshot ? String(assets) : "—"} detail="Across active pairs" />
-          <MiniMetric label="Quote venues" value={venues.length ? String(venues.length) : "—"} detail={venues.length ? venues.map(value => value.toUpperCase()).join(" · " ) : "Not available"} />
-          <div className={styles.miniMetric + " " + styles.emptyMiniMetric} aria-hidden="true" />
+          <article className={styles.miniMetric}>
+            <span className={styles.metricLabel}>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="m2 6 8-4 8 4-8 4z" fill="currentColor" />
+                <path d="m2 10 8 4 8-4M2 14l8 4 8-4" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              </svg>
+              24h trading volume
+            </span>
+            <strong aria-label="24-hour trading volume unavailable">—</strong>
+            <small>Volume not indexed yet</small>
+          </article>
+          <article className={styles.miniMetric}>
+            <span className={styles.metricLabel}>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <circle cx="7" cy="6" r="3" /><circle cx="14" cy="7" r="2.3" />
+                <path d="M1 16a6 6 0 0 1 12 0v1H1zm13.5 0a7.5 7.5 0 0 0-1.6-4.7A4.6 4.6 0 0 1 19 15.7v.8h-4.5z" />
+              </svg>
+              Total Traders
+            </span>
+            <strong aria-label="Total traders unavailable">—</strong>
+            <small>Traders not indexed yet</small>
+          </article>
+          <article className={styles.miniMetric}>
+            <span className={styles.metricLabel}>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2.5 6.5h15m-3-3 3 3-3 3M17.5 13.5h-15m3-3-3 3 3 3" />
+              </svg>
+              Total Swaps
+            </span>
+            <strong aria-label="Total swaps unavailable">—</strong>
+            <small>Swaps not indexed yet</small>
+          </article>
+          <article className={styles.miniMetric}>
+            <div className={styles.feeHeader}>
+              <span className={styles.metricLabel}>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                  <ellipse cx="10" cy="5" rx="6.5" ry="2.5" />
+                  <path d="M3.5 5v10c0 3.3 13 3.3 13 0V5M3.5 8.3c0 3.3 13 3.3 13 0M3.5 11.7c0 3.3 13 3.3 13 0" />
+                </svg>
+                Fees
+              </span>
+              <div className={styles.feePeriods} role="group" aria-label="Fee time range">
+                {feePeriods.map(period => (
+                  <button key={period} type="button" aria-pressed={feePeriod === period} onClick={() => setFeePeriod(period)}>
+                    {period}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <strong aria-label={`Fees unavailable for the last ${feePeriod}`}>—</strong>
+            <small>Fees not indexed yet</small>
+          </article>
         </div>
         <article className={styles.panel + " " + styles.reservePanel}>
           <PanelTitle eyebrow="CURRENT RESERVES" title="Assets held in pools" badge="ONCHAIN" />
@@ -243,6 +284,7 @@ export function AnalyticsDashboard() {
           <Source name="Historical swaps and volume" detail="Requires trade volume indexing" status="NOT INDEXED" />
           <Source name="USD TVL and revenue" detail="Requires token pricing and fee indexing" status="NOT AVAILABLE" />
         </div>
+        <button type="button" className={styles.refresh} onClick={refresh} disabled={loading} aria-label="Refresh analytics" title="Refresh live snapshot">↻</button>
         <div className={styles.info}><b>Snapshot taken</b><span>{snapshot ? new Date(snapshot.checkedAt).toLocaleString() : loading ? "Loading…" : "No snapshot"}</span><p>Unique users appear after the confirmed event history is indexed. Historical volume, revenue, and USD valuations still need separate indexing and pricing.</p></div>
       </article>
     </section>
@@ -257,9 +299,7 @@ function PanelTitle({ eyebrow, title, badge }: { eyebrow: string; title: string;
 function Source({ name, detail, status }: { name: string; detail: string; status: string }) {
   return <div className={styles.source}><i aria-hidden="true">{status === "CONNECTED" ? "✓" : "·"}</i><span><b>{name}</b><small>{detail}</small></span><strong data-online={status === "CONNECTED"}>{status}</strong></div>;
 }
-function MiniMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <article className={styles.miniMetric}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
-}
+
 
 function AllTimeMetric({ label, value = "—", detail = "Not indexed yet" }: { label: string; value?: string; detail?: string }) {
   return <article className={styles.allTimeMetric}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
