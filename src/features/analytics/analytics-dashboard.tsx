@@ -356,13 +356,13 @@ export function AnalyticsDashboard() {
     <Section title="User Growth" />
     <section className={styles.growthGrid} aria-label="User growth analytics">
       <GrowthCard title="Unique Traders by Asset" legends={["WQMS", "USDC", "WETH", "WBTC", "USDT", "Total unique traders"]} />
-      <GrowthCard title="Cumulative New Users" legends={["Daily new users", "Cumulative new users"]} />
+      <ActivitySeriesCard growth />
     </section>
 
     <Section title="Trading Activity" />
     <section className={styles.growthGrid + " " + styles.tradingActivity} aria-label="Trading activity analytics">
-      <TradeCountCard />
-      <DailyUsersCard />
+      <ActivitySeriesCard trades />
+      <ActivitySeriesCard />
     </section>
 
     <Section title="Liquidity & Top Users" />
@@ -401,75 +401,71 @@ function DisabledPeriodFilters() {
     {["D", "W", "M", "Y"].map(period => <button type="button" key={period} disabled title="Historical trading data is not indexed">{period}</button>)}
   </div>;
 }
-function TradeCountCard() {
-  const assets = ["WQMS", "USDC", "WETH", "WBTC", "USDT"];
-  return <article className={styles.activityCard}>
-    <div className={styles.growthHeading}><h2>Number of Trades</h2><span title="Historical trades are not indexed">ⓘ</span></div>
-    <div className={styles.tradeTabs}><button type="button" disabled>Coins</button><button type="button" disabled>Maker / Taker</button></div>
-    <div className={styles.tradeLegends}>
-      {assets.map((asset, index) => <span key={asset}><i data-tone={index % 5} />{asset}</span>)}
-      <span><i data-cumulative="true" />Cumulative trades</span><button type="button" disabled>Deselect all</button>
-    </div>
-    <div className={styles.activityToolbar}><button type="button" disabled>Assets selected⌄</button><DisabledPeriodFilters /></div>
-    <ActivityEmptyChart message="Trade history is not indexed yet" />
-  </article>;
-}
-function DailyUsersCard() {
+function ActivitySeriesCard({growth = false, trades = false}: {growth?: boolean; trades?: boolean}) {
+  const [cumulative, setCumulative] = useState(growth);
+  const [asset, setAsset] = useState("");
   const [range, setRange] = useState("M");
-  const [mode, setMode] = useState<ChartMode>("bars");
-  const [result, setResult] = useState<{range:string; points:{start:number; count:number}[]; message:string}>();
+  const [mode, setMode] = useState<ChartMode>(growth ? "line" : "bars");
+  const [result, setResult] = useState<{range:string; points:{start:number; count:number; total:number}[]; message:string}>();
   useEffect(() => {
     const controller = new AbortController();
     let timer: number;
     async function refresh() {
       try {
-        const data = object(await api("/v1/analytics/daily-users?range=" + range, undefined, controller.signal));
+        const data = object(await api((trades ? "/v1/analytics/trade-counts" : "/v1/analytics/daily-users") + "?range=" + range + (growth ? "&series=growth" : "") + (asset ? "&asset=" + asset : ""), undefined, controller.signal));
         if (controller.signal.aborted) return;
         if (data.status === "indexing") {
-          setResult({range, points:[], message:"Indexing confirmed swaps"});
+          setResult({range:range+asset, points:[], message:"Indexing confirmed swaps"});
         } else {
           if (data.status !== "ready" || !Array.isArray(data.buckets) || data.buckets.length > 365) throw new Error("Invalid wallet history");
           const points = data.buckets.map(value => {
-            const {start,count} = object(value);
+            const {start,count,cumulative:total} = object(value);
             if (typeof start !== "number" || !Number.isSafeInteger(start) || typeof count !== "number" || !Number.isSafeInteger(count) || count < 0) throw new Error("Invalid wallet count");
-            return {start,count};
+            if ((growth || trades) && (typeof total !== "number" || !Number.isSafeInteger(total) || total < count)) throw new Error("Invalid cumulative count");
+            return {start,count,total:growth || trades ? Number(total) : count};
           });
-          setResult({range, points, message:"No active swap wallets in this period"});
+          setResult({range:range+asset, points, message:trades ? "No trades in this period" : growth ? "No new swap wallets in this period" : "No active swap wallets in this period"});
         }
       } catch {
-        if (!controller.signal.aborted) setResult({range, points:[], message:"Wallet history unavailable"});
+        if (!controller.signal.aborted) setResult({range:range+asset, points:[], message:"Activity history unavailable"});
       } finally {
         if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
       }
     }
     void refresh();
     return () => {controller.abort(); window.clearTimeout(timer);};
-  }, [range]);
-  const current = result?.range === range ? result : undefined;
-  const points = current?.points ?? [];
+  }, [range,growth,trades,asset]);
+  const current = result?.range === range+asset ? result : undefined;
+  const points = (current?.points ?? []).map(p => ({...p, count:(growth || trades) && cumulative ? p.total : p.count}));
   const peak = Math.max(0,...points.map(p => p.count));
   const step = 365 / Math.max(1, points.length);
-  const chart = points.map((p,i) => ({x:(i+.5)*step, y:100-100*p.count/(peak || 1),
-    label:new Date(p.start*1000).toISOString().slice(0,10) + " UTC · " + p.count + " wallets"}));
+  const chart = points.map((p,i) => ({x:(i+.5)*step, y:99-98*p.count/(peak || 1),
+    label:new Date(p.start*1000).toISOString().slice(0,10) + " UTC · " + p.count + (trades ? " trades" : " wallets")}));
   const line = chart.map(p => p.x + "," + p.y).join(" ");
   return <article className={styles.activityCard}>
-    <div className={styles.growthHeading}><h2>Daily Active Users</h2></div>
-    <div className={styles.dailyLegend}><span><i />Unique swap wallets per UTC day</span></div>
+    <div className={styles.growthHeading}><h2>{trades ? "Number of Trades" : growth ? "Cumulative New Users" : "Daily Active Users"}</h2></div>
+    {trades && <label>Input asset <select value={asset} onChange={event => setAsset(event.target.value)}>
+      <option value="">All assets</option>{["WQMS","USDC","WETH","WBTC","USDT"].map(symbol => <option key={symbol}>{symbol}</option>)}
+    </select></label>}
+    {growth || trades ? <div className={styles.periods} role="group" aria-label={trades ? "Trade series" : "First-time swap wallets"}>
+      <button type="button" aria-pressed={!cumulative} onClick={() => setCumulative(false)}>{trades ? "Daily trades" : "Daily new wallets"}</button>
+      <button type="button" aria-pressed={cumulative} onClick={() => setCumulative(true)}>{trades ? "Cumulative trades" : "Cumulative wallets"}</button>
+    </div> : <div className={styles.dailyLegend}><span><i />Unique swap wallets per UTC day</span></div>}
     <div className={styles.activityToolbar}>
       <ChartTypeButtons mode={mode} onChange={setMode} />
-      <div className={styles.periods} role="group" aria-label="Active wallet time range">
+      <div className={styles.periods} role="group" aria-label={trades ? "Trade time range" : "Active wallet time range"}>
         {["D","W","M","Y"].map(value => <button key={value} aria-pressed={value === range} onClick={() => setRange(value)}>{value}</button>)}
       </div>
     </div>
     <div className={styles.growthChart}>
-      {peak ? <svg className={styles.volumeSeries} viewBox="0 0 365 100" preserveAspectRatio="none" role="img" aria-label="Unique swap wallets by day">
+      {peak ? <svg className={styles.volumeSeries} viewBox="0 0 365 100" preserveAspectRatio="none" role="img" aria-label={trades ? "Confirmed trades by UTC day" : growth ? "Wallets by first confirmed swap, UTC" : "Unique swap wallets by day"}>
         {mode === "area" && <polygon points={chart[0]!.x + ",100 " + line + " " + chart[chart.length-1]!.x + ",100"} fill="currentColor" opacity=".25" />}
         {mode !== "bars" && <polyline points={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
         {chart.map(p => <g key={p.x}>
-          {mode === "bars" ? <rect x={p.x-step*.4} y={p.y} width={step*.8} height={100-p.y} fill="currentColor" /> : chart.length === 1 && <circle cx={p.x} cy={Math.max(2,p.y)} r="2" fill="currentColor" />}
+          {mode === "bars" ? <rect x={p.x-step*.4} y={p.y} width={step*.8} height={100-p.y} opacity={p.y === 99 ? 0 : 1} fill="currentColor" /> : chart.length === 1 && <circle cx={p.x} cy={Math.max(2,p.y)} r="2" fill="currentColor" />}
           <rect x={p.x-step/2} width={step} height="100" fill="transparent"><title>{p.label}</title></rect>
         </g>)}
-      </svg> : <div className={styles.growthUnavailable} role="status">{current?.message ?? "Loading active wallets"}</div>}
+      </svg> : <div className={styles.growthUnavailable} role="status">{current?.message ?? "Loading activity"}</div>}
     </div>
   </article>;
 }
