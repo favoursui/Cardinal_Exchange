@@ -355,14 +355,14 @@ export function AnalyticsDashboard() {
     </section>
     <Section title="User Growth" />
     <section className={styles.growthGrid} aria-label="User growth analytics">
-      <GrowthCard title="Unique Traders by Asset" legends={["WQMS", "USDC", "WETH", "WBTC", "USDT", "Total unique traders"]} />
-      <ActivitySeriesCard growth />
+      <ActivitySeriesCard series="assetTraders" />
+      <ActivitySeriesCard series="growth" />
     </section>
 
     <Section title="Trading Activity" />
     <section className={styles.growthGrid + " " + styles.tradingActivity} aria-label="Trading activity analytics">
-      <ActivitySeriesCard trades />
-      <ActivitySeriesCard />
+      <ActivitySeriesCard series="trades" />
+      <ActivitySeriesCard series="active" />
     </section>
 
     <Section title="Liquidity & Top Users" />
@@ -380,28 +380,15 @@ function AllTimeMetric({ label, value = "—", detail = "Not indexed yet" }: { l
   return <article className={styles.allTimeMetric}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
 }
 
-function GrowthCard({ title, legends }: { title: string; legends: string[] }) {
-  return <article className={styles.growthCard}>
-    <div className={styles.growthHeading}><h2>{title}</h2><span aria-label="Historical user data is not indexed" title="Historical user data is not indexed">ⓘ</span></div>
-    <div className={styles.growthToolbar}>
-      <div className={styles.growthLegends}>{legends.map((label, index) => <span key={label}><i data-tone={index % 5} />{label}</span>)}</div>
-      <div className={styles.growthPeriods} aria-label="Time range unavailable">
-        {["D", "W", "M", "Y"].map(period => <button type="button" key={period} disabled title="Historical user data is not indexed">{period}</button>)}
-      </div>
-    </div>
-    <div className={styles.growthChart}>
-      <div className={styles.growthGridLines}><i /><i /><i /><i /></div>
-      <div className={styles.growthUnavailable}><strong>Historical user activity unavailable</strong><span>Cadinal needs an on-chain event indexer for this chart.</span></div>
-    </div>
-  </article>;
-}
-
 function DisabledPeriodFilters() {
   return <div className={styles.growthPeriods} aria-label="Time range unavailable">
     {["D", "W", "M", "Y"].map(period => <button type="button" key={period} disabled title="Historical trading data is not indexed">{period}</button>)}
   </div>;
 }
-function ActivitySeriesCard({growth = false, trades = false}: {growth?: boolean; trades?: boolean}) {
+function ActivitySeriesCard({series}: {series: "growth" | "trades" | "active" | "assetTraders"}) {
+  const growth = series === "growth";
+  const trades = series === "trades";
+  const titles = {growth:"Cumulative New Users", trades:"Number of Trades", active:"Daily Active Users", assetTraders:"Unique Traders by Asset"};
   const [cumulative, setCumulative] = useState(growth);
   const [asset, setAsset] = useState("");
   const [range, setRange] = useState("M");
@@ -443,8 +430,8 @@ function ActivitySeriesCard({growth = false, trades = false}: {growth?: boolean;
     label:new Date(p.start*1000).toISOString().slice(0,10) + " UTC · " + p.count + (trades ? " trades" : " wallets")}));
   const line = chart.map(p => p.x + "," + p.y).join(" ");
   return <article className={styles.activityCard}>
-    <div className={styles.growthHeading}><h2>{trades ? "Number of Trades" : growth ? "Cumulative New Users" : "Daily Active Users"}</h2></div>
-    {trades && <label>Input asset <select value={asset} onChange={event => setAsset(event.target.value)}>
+    <div className={styles.growthHeading}><h2>{titles[series]}</h2></div>
+    {(trades || series === "assetTraders") && <label>Input asset <select value={asset} onChange={event => setAsset(event.target.value)}>
       <option value="">All assets</option>{["WQMS","USDC","WETH","WBTC","USDT"].map(symbol => <option key={symbol}>{symbol}</option>)}
     </select></label>}
     {growth || trades ? <div className={styles.periods} role="group" aria-label={trades ? "Trade series" : "First-time swap wallets"}>
