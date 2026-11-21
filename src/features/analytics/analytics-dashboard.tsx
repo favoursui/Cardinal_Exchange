@@ -64,6 +64,41 @@ function TransactionsCard() {
 
 const feePeriods = ["24h", "7d", "30d"] as const;
 
+function FeeTotals({period}: {period: (typeof feePeriods)[number]}) {
+  const [values, setValues] = useState<string[]>([]);
+  const [detail, setDetail] = useState("Loading fees");
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number;
+    async function refresh() {
+      try {
+        const data = object(await api("/v1/analytics/fees?range=" + period, undefined, controller.signal));
+        if (controller.signal.aborted) return;
+        if (data.status === "disabled" || data.status === "indexing") {
+          setValues([]);
+          setDetail(data.status === "disabled" ? "Fee collection disabled" : "Indexing fees");
+        } else {
+          if (data.status !== "ready" || !Array.isArray(data.totals)) throw new Error("Invalid fee totals");
+          const totals = data.totals.map(value => {
+            const {symbol, amount} = object(value);
+            if (typeof symbol !== "string" || typeof amount !== "string" || !/^\d+(?:\.\d+)?$/.test(amount)) throw new Error("Invalid fee amount");
+            return amount + " " + symbol;
+          });
+          setValues(totals.length ? totals : ["0"]);
+          setDetail("Cadinal routing fees");
+        }
+      } catch {
+        if (!controller.signal.aborted) { setValues([]); setDetail("Fees unavailable"); }
+      } finally {
+        if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
+      }
+    }
+    void refresh();
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [period]);
+  return <>{(values.length ? values : ["—"]).map(value => <strong key={value}>{value}</strong>)}<small>{detail}</small></>;
+}
+
 type ChartMode = "bars" | "line" | "area";
 function ChartIcon({ kind }: { kind: ChartMode | "calendar" }) {
   const drawing = {
@@ -114,7 +149,7 @@ function VolumeCard() {
 }
 
 export function AnalyticsDashboard() {
-  const [trades, setTrades] = useState<{swaps: string; traders: string} | null>(null);
+  const [trades, setTrades] = useState<{swaps: string; traders: string; volume:string; daily:string} | null>(null);
   const [tradeStatus, setTradeStatus] = useState("Loading confirmed trades");
   useEffect(() => {
     const controller = new AbortController();
@@ -129,7 +164,12 @@ export function AnalyticsDashboard() {
         } else {
           if (data.status !== "ready" || typeof data.swaps !== "string" || typeof data.traders !== "string" ||
               !/^\d{1,30}$/.test(data.swaps) || !/^\d{1,30}$/.test(data.traders)) throw new Error("Invalid trade counts");
-          setTrades({swaps: BigInt(data.swaps).toLocaleString("en-US"), traders: BigInt(data.traders).toLocaleString("en-US")});
+          const displayVolume = (value: unknown) => {
+            if (typeof value !== "string" || !/^\d+(?:\.\d{1,6})?$/.test(value)) return "—";
+            const [whole, fraction] = value.split(".");
+            return BigInt(whole!).toLocaleString("en-US") + (fraction ? "." + fraction : "");
+          };
+          setTrades({volume: displayVolume(data.stableVolume), daily: displayVolume(data.stableVolume24h), swaps: BigInt(data.swaps).toLocaleString("en-US"), traders: BigInt(data.traders).toLocaleString("en-US")});
           setTradeStatus("Confirmed swaps");
         }
       } catch {
@@ -191,8 +231,8 @@ export function AnalyticsDashboard() {
               </svg>
               24h trading volume
             </span>
-            <strong aria-label="24-hour trading volume unavailable">—</strong>
-            <small>Volume not indexed yet</small>
+            <strong>{trades?.daily ?? "—"}</strong>
+            <small>USDC + USDT swap volume</small>
           </article>
           <article className={styles.miniMetric}>
             <span className={styles.metricLabel}>
@@ -232,8 +272,7 @@ export function AnalyticsDashboard() {
                 ))}
               </div>
             </div>
-            <strong aria-label={`Fees unavailable for the last ${feePeriod}`}>—</strong>
-            <small>Fees not indexed yet</small>
+            <FeeTotals key={feePeriod} period={feePeriod} />
           </article>
         </div>
         <TransactionsCard />
@@ -256,7 +295,7 @@ export function AnalyticsDashboard() {
           ? new Intl.NumberFormat("en-US").format(BigInt(usersMetric.totalUsers)) : "—"}
         detail={usersMetric.status === "ready" ? `Unique wallets through block ${usersMetric.block}` : usersMetric.status === "indexing" ? "Indexing confirmed swap and LP history" : "Analytics unavailable"}
       />
-      <AllTimeMetric label="Total Volume" />
+      <AllTimeMetric label="Total Volume" value={trades?.volume ?? "—"} detail="USDC + USDT swap volume" />
       <AllTimeMetric label="Total Deposits (All Time)" />
       <AllTimeMetric label="Total Withdrawals (All Time)" />
       <div className={styles.allTimeMetric} aria-hidden="true" />
