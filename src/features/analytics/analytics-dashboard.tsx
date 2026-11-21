@@ -72,6 +72,33 @@ function VolumeCard() {
 }
 
 export function AnalyticsDashboard() {
+  const [trades, setTrades] = useState<{swaps: string; traders: string} | null>(null);
+  const [tradeStatus, setTradeStatus] = useState("Loading confirmed trades");
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number;
+    async function refresh() {
+      try {
+        const data = object(await api("/v1/analytics/trades", undefined, controller.signal));
+        if (controller.signal.aborted) return;
+        if (data.status === "indexing") {
+          setTrades(null);
+          setTradeStatus("Indexing confirmed trades");
+        } else {
+          if (data.status !== "ready" || typeof data.swaps !== "string" || typeof data.traders !== "string" ||
+              !/^\d{1,30}$/.test(data.swaps) || !/^\d{1,30}$/.test(data.traders)) throw new Error("Invalid trade counts");
+          setTrades({swaps: BigInt(data.swaps).toLocaleString("en-US"), traders: BigInt(data.traders).toLocaleString("en-US")});
+          setTradeStatus("Confirmed swaps");
+        }
+      } catch {
+        if (!controller.signal.aborted) { setTrades(null); setTradeStatus("Analytics unavailable"); }
+      } finally {
+        if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
+      }
+    }
+    void refresh();
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, []);
   const [usersMetric, setUsersMetric] = useState<UsersMetric>({ status: "indexing", totalUsers: null });
   const [feePeriod, setFeePeriod] = useState<(typeof feePeriods)[number]>("24h");
   useEffect(() => {
@@ -133,8 +160,8 @@ export function AnalyticsDashboard() {
               </svg>
               Total Traders
             </span>
-            <strong aria-label="Total traders unavailable">—</strong>
-            <small>Traders not indexed yet</small>
+            <strong>{trades?.traders ?? "—"}</strong>
+            <small>{tradeStatus}</small>
           </article>
           <article className={styles.miniMetric}>
             <span className={styles.metricLabel}>
@@ -143,8 +170,8 @@ export function AnalyticsDashboard() {
               </svg>
               Total Swaps
             </span>
-            <strong aria-label="Total swaps unavailable">—</strong>
-            <small>Swaps not indexed yet</small>
+            <strong>{trades?.swaps ?? "—"}</strong>
+            <small>{tradeStatus}</small>
           </article>
           <article className={styles.miniMetric}>
             <div className={styles.feeHeader}>
