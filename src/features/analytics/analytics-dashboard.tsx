@@ -7,6 +7,27 @@ import styles from "./analytics.module.css";
 type UsersMetric = { status: "indexing" | "ready" | "unavailable"; totalUsers: string | null; block?: string };
 const transactionRanges = ["24H", "7D", "30D", "90D", "1Y", "ALL"] as const;
 
+function useDatePicker(preset:string) {
+  const [calendar, setCalendar] = useState(false);
+  const [custom, setCustom] = useState<{from:string; to:string}>();
+  const today = new Date().toISOString().slice(0,10);
+  const [from,setFrom] = useState(today);
+  const [to,setTo] = useState(today);
+  const label = custom ? custom.from + " – " + custom.to + " UTC" : undefined;
+  return {custom,label,query:custom ? new URLSearchParams(custom).toString() : "range="+preset,
+    clear:() => {setCalendar(false); setCustom(undefined);},
+    button:<button type="button" aria-expanded={calendar} aria-pressed={!!custom} aria-label="Custom date range" title={label ?? "Custom date range"} onClick={() => setCalendar(!calendar)}><ChartIcon kind="calendar" /></button>,
+    form:<>{calendar && <form className={styles.dateRange} onSubmit={event => {
+      event.preventDefault();
+      setCustom({from,to}); setCalendar(false);
+    }}>
+      <label>From (UTC)<input required type="date" value={from} max={to || today} onChange={e => setFrom(e.target.value)} /></label>
+      <label>To (UTC)<input required type="date" value={to} min={from} max={today} onChange={e => setTo(e.target.value)} /></label>
+      <button type="submit">Apply</button>
+    </form>}</>,
+  };
+}
+
 function TransactionsCard() {
   const [range, setRange] = useState<(typeof transactionRanges)[number]>("24H");
   const [points, setPoints] = useState<{start:number; count:number}[]>([]);
@@ -135,16 +156,19 @@ function VolumeCard() {
   const [mode, setMode] = useState<ChartMode>("bars");
   const [range, setRange] = useState<(typeof volumeRanges)[number]>("1M");
 
+  const picker = useDatePicker(volumeWindows[range]);
+  const {query,custom} = picker;
+  const period = picker.label ?? range;
   const [series, setSeries] = useState<{range:string; points:{start:number; raw:bigint}[]; status:string}>();
   useEffect(() => {
     const controller = new AbortController();
     let timer: number;
     async function refresh() {
       try {
-        const data = object(await api("/v1/analytics/transactions?range=" + volumeWindows[range], undefined, controller.signal));
+        const data = object(await api("/v1/analytics/transactions?" + query, undefined, controller.signal));
         if (controller.signal.aborted) return;
         if (data.status === "indexing") {
-          setSeries({range, points:[], status:"Indexing confirmed swaps"});
+          setSeries({range:query, points:[], status:"Indexing confirmed swaps"});
         } else {
           if (data.status !== "ready" || !Array.isArray(data.buckets) || data.buckets.length > 24) throw new Error("Invalid volume history");
           const points = data.buckets.map(value => {
@@ -153,18 +177,18 @@ function VolumeCard() {
                 !/^\d{1,100}$/.test(stableVolumeRaw)) throw new Error("Invalid volume bucket");
             return {start, raw:BigInt(stableVolumeRaw)};
           });
-          setSeries({range, points, status:"No stablecoin volume in this period"});
+          setSeries({range:query, points, status:"No stablecoin volume in this period"});
         }
       } catch {
-        if (!controller.signal.aborted) setSeries({range, points:[], status:"Volume history unavailable"});
+        if (!controller.signal.aborted) setSeries({range:query, points:[], status:"Volume history unavailable"});
       } finally {
         if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
       }
     }
     void refresh();
     return () => {controller.abort(); window.clearTimeout(timer);};
-  }, [range]);
-  const current = series?.range === range ? series : undefined;
+  }, [query]);
+  const current = series?.range === query ? series : undefined;
   const points = current?.points ?? [];
   const total = points.reduce((sum, p) => sum + p.raw, BigInt(0));
   const peak = points.reduce((max, p) => p.raw > max ? p.raw : max, BigInt(0));
@@ -180,16 +204,17 @@ function VolumeCard() {
       <div className={styles.chartControls}>
         <ChartTypeButtons mode={mode} onChange={setMode} />
         <div className={styles.periods} role="group" aria-label="Volume time range">
-          {volumeRanges.map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}
-          <button type="button" disabled aria-label="Custom date range unavailable" title="Custom date range unavailable"><ChartIcon kind="calendar" /></button>
+          {volumeRanges.map(value => <button key={value} type="button" aria-pressed={!custom && range === value} onClick={() => {picker.clear(); setRange(value);}}>{value}</button>)}
+          {picker.button}
         </div>
       </div>
     </header>
+    {picker.form}
     <div className={styles.featureValue}><strong>{points.length ? formatVolume(total) : "—"}</strong></div>
-    <div className={styles.volumeChanges}><span>USDC + USDT swap volume · {range}</span></div>
+    <div className={styles.volumeChanges}><span>USDC + USDT swap volume · {period}</span></div>
     <div className={styles.volumePlot}>
       <span aria-hidden="true" className={styles.volumeWatermark}>Cadinal</span>
-      {peak > BigInt(0) ? <svg className={styles.volumeSeries} viewBox="0 0 240 100" preserveAspectRatio="none" role="img" aria-label={range + " stablecoin swap volume"}>
+      {peak > BigInt(0) ? <svg className={styles.volumeSeries} viewBox="0 0 240 100" preserveAspectRatio="none" role="img" aria-label={period + " stablecoin swap volume"}>
         {mode === "area" && <polygon points={bars[0]!.x + ",100 " + line + " " + bars[bars.length-1]!.x + ",100"} fill="currentColor" opacity=".25" />}
         {mode !== "bars" && <polyline points={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
         {bars.map((b,i) => <g key={points[i]!.start}>
