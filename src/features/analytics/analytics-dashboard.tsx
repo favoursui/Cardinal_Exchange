@@ -124,10 +124,56 @@ function ChartTypeButtons({ mode, onChange }: { mode?: ChartMode; onChange?: (mo
 
 const volumeRanges = ["1D", "7D", "1M", "3M", "1Y"] as const;
 
+const volumeWindows = {"1D":"24H","7D":"7D","1M":"30D","3M":"90D","1Y":"1Y"} as const;
+
+function formatVolume(raw: bigint) {
+  const fraction = (raw % BigInt(1000000)).toString().padStart(6, "0").replace(/0+$/, "");
+  return (raw / BigInt(1000000)).toLocaleString("en-US") + (fraction ? "." + fraction : "");
+}
+
 function VolumeCard() {
   const [mode, setMode] = useState<ChartMode>("bars");
   const [range, setRange] = useState<(typeof volumeRanges)[number]>("1M");
 
+  const [series, setSeries] = useState<{range:string; points:{start:number; raw:bigint}[]; status:string}>();
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number;
+    async function refresh() {
+      try {
+        const data = object(await api("/v1/analytics/transactions?range=" + volumeWindows[range], undefined, controller.signal));
+        if (controller.signal.aborted) return;
+        if (data.status === "indexing") {
+          setSeries({range, points:[], status:"Indexing confirmed swaps"});
+        } else {
+          if (data.status !== "ready" || !Array.isArray(data.buckets) || data.buckets.length > 24) throw new Error("Invalid volume history");
+          const points = data.buckets.map(value => {
+            const {start, stableVolumeRaw} = object(value);
+            if (typeof start !== "number" || !Number.isSafeInteger(start) || typeof stableVolumeRaw !== "string" ||
+                !/^\d{1,100}$/.test(stableVolumeRaw)) throw new Error("Invalid volume bucket");
+            return {start, raw:BigInt(stableVolumeRaw)};
+          });
+          setSeries({range, points, status:"No stablecoin volume in this period"});
+        }
+      } catch {
+        if (!controller.signal.aborted) setSeries({range, points:[], status:"Volume history unavailable"});
+      } finally {
+        if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
+      }
+    }
+    void refresh();
+    return () => {controller.abort(); window.clearTimeout(timer);};
+  }, [range]);
+  const current = series?.range === range ? series : undefined;
+  const points = current?.points ?? [];
+  const total = points.reduce((sum, p) => sum + p.raw, BigInt(0));
+  const peak = points.reduce((max, p) => p.raw > max ? p.raw : max, BigInt(0));
+  const bars = points.map((p,i) => ({
+    x:(i + 0.5) * 240 / points.length,
+    y:100 - 100 * Number(p.raw) / Number(peak || BigInt(1)),
+    label:new Date(p.start * 1000).toLocaleString() + " · " + formatVolume(p.raw) + " USDC + USDT",
+  }));
+  const line = bars.map(b => b.x + "," + b.y).join(" ");
   return <article className={styles.panel + " " + styles.featurePanel + " " + styles.volumePanel}>
     <header className={styles.volumeHeader}>
       <h2>Total Volume</h2>
@@ -135,15 +181,22 @@ function VolumeCard() {
         <ChartTypeButtons mode={mode} onChange={setMode} />
         <div className={styles.periods} role="group" aria-label="Volume time range">
           {volumeRanges.map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}
-          <button type="button" disabled aria-label="Custom date range unavailable" title="Volume history is not indexed yet"><ChartIcon kind="calendar" /></button>
+          <button type="button" disabled aria-label="Custom date range unavailable" title="Custom date range unavailable"><ChartIcon kind="calendar" /></button>
         </div>
       </div>
     </header>
-    <div className={styles.featureValue}><strong aria-label="Total trading volume in USD unavailable">—</strong></div>
-    <div className={styles.volumeChanges}><span>24h —</span><span>30d —</span></div>
+    <div className={styles.featureValue}><strong>{points.length ? formatVolume(total) : "—"}</strong></div>
+    <div className={styles.volumeChanges}><span>USDC + USDT swap volume · {range}</span></div>
     <div className={styles.volumePlot}>
       <span aria-hidden="true" className={styles.volumeWatermark}>Cadinal</span>
-      <span className={styles.volumeEmpty} role="status">Volume history unavailable · {range}</span>
+      {peak > BigInt(0) ? <svg className={styles.volumeSeries} viewBox="0 0 240 100" preserveAspectRatio="none" role="img" aria-label={range + " stablecoin swap volume"}>
+        {mode === "area" && <polygon points={bars[0]!.x + ",100 " + line + " " + bars[bars.length-1]!.x + ",100"} fill="currentColor" opacity=".25" />}
+        {mode !== "bars" && <polyline points={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
+        {bars.map((b,i) => <g key={points[i]!.start}>
+          {mode === "bars" && <rect x={b.x-4} y={b.y} width="8" height={100-b.y} fill="currentColor" />}
+          <rect x={b.x-5} width="10" height="100" fill="transparent"><title>{b.label}</title></rect>
+        </g>)}
+      </svg> : <span className={styles.volumeEmpty} role="status">{current?.status ?? "Loading volume history"}</span>}
     </div>
   </article>;
 }
@@ -362,14 +415,62 @@ function TradeCountCard() {
   </article>;
 }
 function DailyUsersCard() {
+  const [range, setRange] = useState("M");
+  const [mode, setMode] = useState<ChartMode>("bars");
+  const [result, setResult] = useState<{range:string; points:{start:number; count:number}[]; message:string}>();
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number;
+    async function refresh() {
+      try {
+        const data = object(await api("/v1/analytics/daily-users?range=" + range, undefined, controller.signal));
+        if (controller.signal.aborted) return;
+        if (data.status === "indexing") {
+          setResult({range, points:[], message:"Indexing confirmed swaps"});
+        } else {
+          if (data.status !== "ready" || !Array.isArray(data.buckets) || data.buckets.length > 365) throw new Error("Invalid wallet history");
+          const points = data.buckets.map(value => {
+            const {start,count} = object(value);
+            if (typeof start !== "number" || !Number.isSafeInteger(start) || typeof count !== "number" || !Number.isSafeInteger(count) || count < 0) throw new Error("Invalid wallet count");
+            return {start,count};
+          });
+          setResult({range, points, message:"No active swap wallets in this period"});
+        }
+      } catch {
+        if (!controller.signal.aborted) setResult({range, points:[], message:"Wallet history unavailable"});
+      } finally {
+        if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
+      }
+    }
+    void refresh();
+    return () => {controller.abort(); window.clearTimeout(timer);};
+  }, [range]);
+  const current = result?.range === range ? result : undefined;
+  const points = current?.points ?? [];
+  const peak = Math.max(0,...points.map(p => p.count));
+  const step = 365 / Math.max(1, points.length);
+  const chart = points.map((p,i) => ({x:(i+.5)*step, y:100-100*p.count/(peak || 1),
+    label:new Date(p.start*1000).toISOString().slice(0,10) + " UTC · " + p.count + " wallets"}));
+  const line = chart.map(p => p.x + "," + p.y).join(" ");
   return <article className={styles.activityCard}>
     <div className={styles.growthHeading}><h2>Daily Active Users</h2></div>
-    <div className={styles.dailyLegend}><span><i />Daily active users</span></div>
+    <div className={styles.dailyLegend}><span><i />Unique swap wallets per UTC day</span></div>
     <div className={styles.activityToolbar}>
-      <ChartTypeButtons />
-      <DisabledPeriodFilters />
+      <ChartTypeButtons mode={mode} onChange={setMode} />
+      <div className={styles.periods} role="group" aria-label="Active wallet time range">
+        {["D","W","M","Y"].map(value => <button key={value} aria-pressed={value === range} onClick={() => setRange(value)}>{value}</button>)}
+      </div>
     </div>
-    <ActivityEmptyChart message="Active wallet history is not indexed yet" />
+    <div className={styles.growthChart}>
+      {peak ? <svg className={styles.volumeSeries} viewBox="0 0 365 100" preserveAspectRatio="none" role="img" aria-label="Unique swap wallets by day">
+        {mode === "area" && <polygon points={chart[0]!.x + ",100 " + line + " " + chart[chart.length-1]!.x + ",100"} fill="currentColor" opacity=".25" />}
+        {mode !== "bars" && <polyline points={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
+        {chart.map(p => <g key={p.x}>
+          {mode === "bars" ? <rect x={p.x-step*.4} y={p.y} width={step*.8} height={100-p.y} fill="currentColor" /> : chart.length === 1 && <circle cx={p.x} cy={Math.max(2,p.y)} r="2" fill="currentColor" />}
+          <rect x={p.x-step/2} width={step} height="100" fill="transparent"><title>{p.label}</title></rect>
+        </g>)}
+      </svg> : <div className={styles.growthUnavailable} role="status">{current?.message ?? "Loading active wallets"}</div>}
+    </div>
   </article>;
 }
 function ActivityEmptyChart({ message }: { message: string }) {

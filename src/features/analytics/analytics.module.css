@@ -131,3 +131,5 @@
 .txBars { height: 145px; display: flex; gap: 3px; align-items: flex-end; border-bottom: 1px solid currentColor; }
 .txBars > div { flex: 1; background: #439e84; }
 .txFigure figcaption { margin-top: 6px; font-size: 12px; }
+
+.volumeSeries { position: absolute; inset: 0; width: 100%; height: 100%; color: #439e84; }
