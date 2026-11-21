@@ -489,12 +489,53 @@ function SlippageCard() {
   </article>;
 }
 function TopUsersCard() {
+  const [page, setPage] = useState(1);
+  const [result, setResult] = useState<{page:number; users:{wallet:string; volume:string}[]; hasNext:boolean; message:string}>();
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number;
+    async function refresh() {
+      try {
+        const data = object(await api("/v1/analytics/top-users?page=" + page, undefined, controller.signal));
+        if (controller.signal.aborted) return;
+        if (data.status === "indexing") {
+          setResult({page, users:[], hasNext:false, message:"Indexing confirmed swaps"});
+        } else {
+          if (data.status !== "ready" || typeof data.hasNext !== "boolean" || !Array.isArray(data.users) || data.users.length > 10) throw new Error("Invalid leaderboard");
+          const users = data.users.map(value => {
+            const {wallet, stableVolumeRaw} = object(value);
+            if (typeof wallet !== "string" || !/^0x[0-9a-f]{40}$/i.test(wallet) || typeof stableVolumeRaw !== "string" ||
+                !/^\d{1,100}$/.test(stableVolumeRaw)) throw new Error("Invalid ranked wallet");
+            return {wallet, volume:formatVolume(BigInt(stableVolumeRaw))};
+          });
+          setResult({page, users, hasNext:data.hasNext, message:"No ranked wallets on this page"});
+        }
+      } catch {
+        if (!controller.signal.aborted) setResult({page, users:[], hasNext:false, message:"Rankings unavailable"});
+      } finally {
+        if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
+      }
+    }
+    void refresh();
+    return () => {controller.abort(); window.clearTimeout(timer);};
+  }, [page]);
+  const current = result?.page === page ? result : undefined;
   return <article className={styles.activityCard + " " + styles.topUsersCard}>
     <div className={styles.growthHeading}><h2>Top Users By Volume</h2></div>
     <div className={styles.usersTable}>
-      <div className={styles.usersTableHead}><span>WALLET</span><span>VOLUME</span></div>
-      <div className={styles.usersEmpty}>Trader volume data is not indexed yet.</div>
-      <div className={styles.usersTableFoot}><span>Wallet activity unavailable</span><div><button disabled aria-label="Previous page">‹</button><span>—</span><button disabled aria-label="Next page">›</button></div></div>
+      <table className={styles.rankedWallets}>
+        <thead><tr><th scope="col">Wallet</th><th scope="col">Volume (USDC + USDT)</th></tr></thead>
+        <tbody>{current?.users.map((user,index) => <tr key={user.wallet}>
+          <td title={user.wallet}>{(page-1)*10+index+1}. {user.wallet.slice(0,6)}…{user.wallet.slice(-4)}</td>
+          <td>{user.volume}</td>
+        </tr>)}</tbody>
+      </table>
+      {!current?.users.length && <div className={styles.usersEmpty} role="status">{current?.message ?? "Loading wallet rankings"}</div>}
+      <div className={styles.usersTableFoot}><span>All-time stablecoin volume</span><div>
+        <button disabled={page === 1} aria-label="Previous page" onClick={() => setPage(page-1)}>‹</button>
+        <span>Page {page}</span>
+        <button disabled={!current?.hasNext} aria-label="Next page" onClick={() => setPage(page+1)}>›</button>
+      </div></div>
     </div>
   </article>;
 }
