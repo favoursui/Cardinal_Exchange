@@ -9,6 +9,40 @@ const transactionRanges = ["24H", "7D", "30D", "90D", "1Y", "ALL"] as const;
 
 function TransactionsCard() {
   const [range, setRange] = useState<(typeof transactionRanges)[number]>("24H");
+  const [points, setPoints] = useState<{start:number; count:number}[]>([]);
+  const [message, setMessage] = useState("Loading transactions");
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number;
+    setPoints([]);
+    setMessage("Loading transactions");
+    async function refresh() {
+      try {
+        const data = object(await api("/v1/analytics/transactions?range=" + range, undefined, controller.signal));
+        if (controller.signal.aborted) return;
+        if (data.status === "indexing") {
+          setPoints([]);
+          setMessage("Indexing confirmed transactions");
+        } else {
+          if (data.status !== "ready" || !Array.isArray(data.buckets) || data.buckets.length > 24) throw new Error("Invalid history");
+          const buckets = data.buckets.map(value => {
+            const { start, count } = object(value);
+            if (typeof start !== "number" || typeof count !== "number" || !Number.isSafeInteger(start) || !Number.isSafeInteger(count) || count < 0) throw new Error("Invalid bucket");
+            return {start,count};
+          });
+          setPoints(buckets);
+          setMessage("No confirmed swaps in this period");
+        }
+      } catch {
+        if (!controller.signal.aborted) { setPoints([]); setMessage("Transaction history unavailable"); }
+      } finally {
+        if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
+      }
+    }
+    void refresh();
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [range]);
+  const peak = Math.max(0, ...points.map(point => point.count));
   return <article className={styles.panel + " " + styles.transactionsPanel}>
     <header className={styles.volumeHeader}>
       <h2 className={styles.transactionTitle}><svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"><path d="M2 6h15l-3-3m3 3-3 3M18 14H3l3-3m-3 3 3 3" /></svg>Transactions</h2>
@@ -16,7 +50,15 @@ function TransactionsCard() {
         {transactionRanges.map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => setRange(value)}>{value}</button>)}
       </div>
     </header>
-    <div className={styles.emptyChart} role="status">Transaction history not indexed yet · {range}</div>
+    {peak > 0 ? <figure className={styles.txFigure}>
+      <div className={styles.txBars} aria-label="Confirmed swap transactions">
+        {points.map(point => {
+          const label = new Date(point.start * 1000).toLocaleString() + " · " + point.count + " transactions";
+          return <div key={point.start} title={label} role="img" aria-label={label} style={{height: (100 * point.count / peak) + "%"}} />;
+        })}
+      </div>
+      <figcaption>{new Date(points[0]!.start * 1000).toLocaleString()} · {points.reduce((sum,point) => sum + point.count, 0).toLocaleString()} transactions</figcaption>
+    </figure> : <div className={styles.emptyChart} role="status">{message}</div>}
   </article>;
 }
 

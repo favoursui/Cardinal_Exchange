@@ -126,3 +126,8 @@
   .tradingActivity .activityToolbar { margin-top: auto; }
   .tradingActivity .growthChart { flex-shrink: 0; }
 }
+
+.txFigure { margin: auto 0 0; }
+.txBars { height: 145px; display: flex; gap: 3px; align-items: flex-end; border-bottom: 1px solid currentColor; }
+.txBars > div { flex: 1; background: #439e84; }
+.txFigure figcaption { margin-top: 6px; font-size: 12px; }
