@@ -64,19 +64,19 @@ function TransactionsCard() {
 
 const feePeriods = ["24h", "7d", "30d"] as const;
 
-function FeeTotals({period}: {period: (typeof feePeriods)[number]}) {
+function TokenTotals({period}: {period?: (typeof feePeriods)[number]}) {
   const [values, setValues] = useState<string[]>([]);
-  const [detail, setDetail] = useState("Loading fees");
+  const [detail, setDetail] = useState(period ? "Loading fees" : "Loading withdrawals");
   useEffect(() => {
     const controller = new AbortController();
     let timer: number;
     async function refresh() {
       try {
-        const data = object(await api("/v1/analytics/fees?range=" + period, undefined, controller.signal));
+        const data = object(await api(period ? "/v1/analytics/fees?range=" + period : "/v1/analytics/withdrawals", undefined, controller.signal));
         if (controller.signal.aborted) return;
         if (data.status === "disabled" || data.status === "indexing") {
           setValues([]);
-          setDetail(data.status === "disabled" ? "Fee collection disabled" : "Indexing fees");
+          setDetail(data.status === "disabled" ? "Fee collection disabled" : (period ? "Indexing fees" : "Indexing withdrawals"));
         } else {
           if (data.status !== "ready" || !Array.isArray(data.totals)) throw new Error("Invalid fee totals");
           const totals = data.totals.map(value => {
@@ -85,10 +85,10 @@ function FeeTotals({period}: {period: (typeof feePeriods)[number]}) {
             return amount + " " + symbol;
           });
           setValues(totals.length ? totals : ["0"]);
-          setDetail("Cadinal routing fees");
+          setDetail(period ? "Cadinal routing fees" : "Cadinal pools · listed tokens");
         }
       } catch {
-        if (!controller.signal.aborted) { setValues([]); setDetail("Fees unavailable"); }
+        if (!controller.signal.aborted) { setValues([]); setDetail(period ? "Fees unavailable" : "Withdrawals unavailable"); }
       } finally {
         if (!controller.signal.aborted) timer = window.setTimeout(refresh, 30000);
       }
@@ -325,7 +325,7 @@ export function AnalyticsDashboard() {
                 ))}
               </div>
             </div>
-            <FeeTotals key={feePeriod} period={feePeriod} />
+            <TokenTotals key={feePeriod} period={feePeriod} />
           </article>
         </div>
         <TransactionsCard />
@@ -350,7 +350,7 @@ export function AnalyticsDashboard() {
       />
       <AllTimeMetric label="Total Volume" value={trades?.volume ?? "—"} detail="USDC + USDT swap volume" />
       <AllTimeMetric label="Total Deposits (All Time)" />
-      <AllTimeMetric label="Total Withdrawals (All Time)" />
+      <article className={styles.allTimeMetric}><span>Total Withdrawals (All Time)</span><TokenTotals /></article>
       <div className={styles.allTimeMetric} aria-hidden="true" />
     </section>
     <Section title="User Growth" />
@@ -380,11 +380,6 @@ function AllTimeMetric({ label, value = "—", detail = "Not indexed yet" }: { l
   return <article className={styles.allTimeMetric}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
 }
 
-function DisabledPeriodFilters() {
-  return <div className={styles.growthPeriods} aria-label="Time range unavailable">
-    {["D", "W", "M", "Y"].map(period => <button type="button" key={period} disabled title="Historical trading data is not indexed">{period}</button>)}
-  </div>;
-}
 function ActivitySeriesCard({series}: {series: "growth" | "trades" | "active" | "assetTraders"}) {
   const growth = series === "growth";
   const trades = series === "trades";
@@ -456,19 +451,57 @@ function ActivitySeriesCard({series}: {series: "growth" | "trades" | "active" | 
     </div>
   </article>;
 }
-function ActivityEmptyChart({ message }: { message: string }) {
-  return <div className={styles.growthChart}><div className={styles.growthGridLines}><i /><i /><i /><i /></div><div className={styles.growthUnavailable}><strong>{message}</strong><span>Cadinal needs an on-chain event indexer for these metrics.</span></div></div>;
-}
-
 function SlippageCard() {
+  const [range,setRange] = useState("M");
+  const [series,setSeries] = useState<{range:string; message:string; points:{day:number; percent:number; samples:number}[]}>();
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number;
+    async function refresh() {
+      try {
+        const data = object(await api("/v1/analytics/slippage?range=" + range, undefined, controller.signal));
+        if (controller.signal.aborted) return;
+        if (data.status === "indexing") setSeries({range,points:[],message:"Indexing confirmed swaps"});
+        else {
+          if (data.status !== "ready" || !Array.isArray(data.points) || data.points.length > 365) throw new Error("Invalid slippage history");
+          const points = data.points.map(value => {
+            const {day,percent,samples} = object(value);
+            if (typeof day !== "number" || !Number.isSafeInteger(day) || typeof percent !== "number" || !Number.isFinite(percent) ||
+                typeof samples !== "number" || !Number.isSafeInteger(samples) || samples < 1) throw new Error("Invalid slippage measurement");
+            return {day,percent,samples};
+          });
+          setSeries({range,points,message:"No confirmed swaps matched a prepared quote in this period"});
+        }
+      } catch {
+        if (!controller.signal.aborted) setSeries({range,points:[],message:"Slippage history unavailable"});
+      } finally {
+        if (!controller.signal.aborted) timer = window.setTimeout(refresh,30000);
+      }
+    }
+    void refresh();
+    return () => {controller.abort(); window.clearTimeout(timer);};
+  },[range]);
+  const current = series?.range === range ? series : undefined;
+  const points = current?.points ?? [];
+  const peak = Math.max(...points.map(p => Math.abs(p.percent)),0) || 1;
+  const days = {D:1,W:7,M:30,Y:365}[range] ?? 30;
+  const first = Math.floor(Date.now()/86400000)-days+1;
   return <article className={styles.activityCard}>
-    <div className={styles.growthHeading}><h2>Slippage</h2><span title="Historical slippage is not indexed">ⓘ</span></div>
-    <div className={styles.slippageControls}>
-      <div>{["Half Spread", "$1k", "$10k", "$30k", "$100k"].map((item, index) => <button type="button" key={item} disabled aria-pressed={index === 0}>{item}</button>)}</div>
-      <div className={styles.tradeLegends}>{["WQMS", "USDC", "WETH", "WBTC", "USDT"].map((asset, index) => <span key={asset}><i data-tone={index} />{asset}</span>)}<button type="button" disabled>Deselect all</button></div>
+    <div className={styles.growthHeading}><h2>Slippage</h2></div>
+    <div className={styles.activityToolbar}><span>Daily average · positive means less received</span>
+      <div className={styles.periods} role="group" aria-label="Slippage time range">
+        {["D","W","M","Y"].map(value => <button key={value} aria-pressed={value === range} onClick={() => setRange(value)}>{value}</button>)}
+      </div>
     </div>
-    <div className={styles.activityToolbar}><button type="button" disabled>Assets selected⌄</button><DisabledPeriodFilters /></div>
-    <ActivityEmptyChart message="Historical slippage is not indexed" />
+    <div className={styles.growthChart}>{points.length ? <svg className={styles.volumeSeries} viewBox="0 0 365 100" preserveAspectRatio="none" role="img" aria-label="Daily average execution slippage">
+      <line x2="365" y1="50" y2="50" stroke="currentColor" opacity=".4" />
+      {points.map(p => {
+        const y = 50-46*p.percent/peak;
+        return <rect key={p.day} x={(p.day-first+.1)*365/days} width={.8*365/days} y={Math.min(50,y)} height={Math.max(1,Math.abs(50-y))} fill="currentColor">
+          <title>{new Date(p.day*86400000).toISOString().slice(0,10)} UTC · {p.percent.toFixed(3)}% · {p.samples} matched</title>
+        </rect>;
+      })}
+    </svg> : <div className={styles.growthUnavailable} role="status">{current?.message ?? "Loading slippage"}</div>}</div>
   </article>;
 }
 function TopUsersCard() {
