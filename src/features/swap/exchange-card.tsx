@@ -12,6 +12,8 @@ import { TokenLogo } from "@/components/ui/token-logo";
 import { tokens, tokenMetadata, type Token } from "@/lib/config/tokens";
 import { baseUnits, displayUnits, displayBalance, useRouteQuote } from "./use-route-quote";
 import styles from "./exchange-card.module.css";
+import { useLiquidity } from "@/features/liquidity/use-liquidity";
+import { estimateUsd, usdLabel } from "./usd-estimate";
 import { useNetworkGasPrice } from "./use-network-fee";
 
 type IconName = "history" | "settings" | "refresh" | "switch" | "gas" | "wallet";
@@ -126,6 +128,13 @@ export function ExchangeCard() {
 
   const inputBalance = balanceState.balances[inputToken], outputBalance = balanceState.balances[outputToken];
   const amountIn = baseUnits(amount, tokenMetadata[inputToken].decimals);
+  const pools = useLiquidity(null).state?.pools ?? [];
+  const amountOut = conversion ? amountIn : route.quote?.amountOut;
+  const inputUsd = amountIn ? estimateUsd(inputToken, amountIn, pools) : null;
+  const outputUsd = amountOut ? estimateUsd(outputToken, amountOut, pools) : null;
+  // When only one side has a reference price, the selected quote implies the other side's value.
+  const fromUsd = amountIn ? inputUsd ?? (route.quote ? outputUsd : null) : /^0*(?:\.0*)?$/.test(amount) ? BigInt(0) : null;
+  const toUsd = amountOut ? outputUsd ?? (route.quote ? inputUsd : null) : fromUsd === BigInt(0) && !amountIn ? BigInt(0) : null;
   const intent: Intent | null = conversion && amountIn ? {kind: conversion === "Wrap" ? "wrap" : "unwrap", amount: amountIn} : route.quote ? {kind: "swap", quote: route.quote, deadlineSeconds: settings.deadlineMinutes * 60} : null;
   const feeKey = JSON.stringify([wallet.account, wallet.chainId, intent]);
   const currentGas = gasBudget?.key === feeKey ? gasBudget : undefined;
@@ -186,7 +195,7 @@ export function ExchangeCard() {
             <input id="swap-amount" aria-label={`Amount of ${inputToken} to swap`} value={amount} placeholder="0.00" inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={79} onChange={event => { if (/^\d*(\.\d*)?$/.test(event.target.value)) setAmount(event.target.value); }} />
             <TokenPicker token={inputToken} label="From token" onChange={token => chooseToken("input", token)} balances={balanceState.balances} />
           </div>
-          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {inputBalance === undefined ? "—" : displayBalance(inputBalance, tokenMetadata[inputToken].decimals)} <button type="button" disabled={inputBalance === undefined || !wallet.correctNetwork} onClick={() => void fillMax()} title={inputToken === "QMS" ? "Reserve a conservative gas budget" : "Use token balance"}>MAX</button></span></div>
+          <div className={styles.balanceRow}><span title="Estimated USD value on QMS testnet">{usdLabel(fromUsd, !!amountIn)}</span><span>Balance: {inputBalance === undefined ? "—" : displayBalance(inputBalance, tokenMetadata[inputToken].decimals)} <button type="button" disabled={inputBalance === undefined || !wallet.correctNetwork} onClick={() => void fillMax()} title={inputToken === "QMS" ? "Reserve a conservative gas budget" : "Use token balance"}>MAX</button></span></div>
         </div>
 
         <div className={styles.switchDivider}>
@@ -199,7 +208,7 @@ export function ExchangeCard() {
             <output aria-label="Estimated output amount" className={styles.output}>{conversion ? conversionAmount : estimatedOutput}</output>
             <TokenPicker token={outputToken} label="To token" onChange={token => chooseToken("output", token)} balances={balanceState.balances} />
           </div>
-          <div className={styles.balanceRow}><span>— USD</span><span>Balance: {outputBalance === undefined ? "—" : displayBalance(outputBalance, tokenMetadata[outputToken].decimals)}</span></div>
+          <div className={styles.balanceRow}><span title="Estimated USD value on QMS testnet">{usdLabel(toUsd, !!amountOut && BigInt(amountOut) > BigInt(0))}</span><span>Balance: {outputBalance === undefined ? "—" : displayBalance(outputBalance, tokenMetadata[outputToken].decimals)}</span></div>
         </div>
         <div className={styles.recipient}><Icon name="wallet" /><span title={wallet.account ?? undefined}>{wallet.account ? shortAddress(wallet.account) : "No wallet connected"}</span></div>
       </div>

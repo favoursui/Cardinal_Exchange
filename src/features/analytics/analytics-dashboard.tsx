@@ -282,6 +282,9 @@ export function AnalyticsDashboard() {
           throw new Error("Invalid analytics response.");
         }
         const metric: UsersMetric = { status: data.status as UsersMetric["status"], totalUsers: data.totalUsers };
+        if (metric.status === "indexing" && typeof data.lastScannedBlock === "string" && /^[0-9]+$/.test(data.lastScannedBlock)) {
+          metric.block = data.lastScannedBlock;
+        }
         if (metric.status === "ready") {
           const blocks = Object.values(object(data.indexedThrough));
           if (metric.totalUsers === null || !blocks.length ||
@@ -379,7 +382,7 @@ export function AnalyticsDashboard() {
         label="Total Users"
         value={usersMetric.status === "ready" && usersMetric.totalUsers !== null
           ? new Intl.NumberFormat("en-US").format(BigInt(usersMetric.totalUsers)) : "—"}
-        detail={usersMetric.status === "ready" ? `Unique wallets through block ${usersMetric.block}` : usersMetric.status === "indexing" ? "Indexing confirmed swap and LP history" : "Analytics unavailable"}
+        detail={usersMetric.status === "ready" ? `Unique wallets through block ${usersMetric.block}` : usersMetric.status === "indexing" ? (usersMetric.block ? `Last indexed block ${usersMetric.block}` : "Indexing confirmed swap and LP history") : "Analytics unavailable"}
       />
       <AllTimeMetric label="Total Volume" value={trades?.volume ?? "—"} detail={`Estimated USD · ${trades?.coverage ?? tradeStatus}`} />
       <AllTimeMetric label="Total Deposits (All Time)" />
