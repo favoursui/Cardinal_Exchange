@@ -159,7 +159,7 @@ function VolumeCard() {
   const picker = useDatePicker(volumeWindows[range]);
   const {query,custom} = picker;
   const period = picker.label ?? range;
-  const [series, setSeries] = useState<{range:string; points:{start:number; raw:bigint}[]; status:string}>();
+  const [series, setSeries] = useState<{range:string; points:{start:number; raw:bigint; priced:number; swaps:number}[]; status:string}>();
   useEffect(() => {
     const controller = new AbortController();
     let timer: number;
@@ -172,12 +172,14 @@ function VolumeCard() {
         } else {
           if (data.status !== "ready" || !Array.isArray(data.buckets) || data.buckets.length > 24) throw new Error("Invalid volume history");
           const points = data.buckets.map(value => {
-            const {start, stableVolumeRaw} = object(value);
-            if (typeof start !== "number" || !Number.isSafeInteger(start) || typeof stableVolumeRaw !== "string" ||
-                !/^\d{1,100}$/.test(stableVolumeRaw)) throw new Error("Invalid volume bucket");
-            return {start, raw:BigInt(stableVolumeRaw)};
+            const {start, usdVolumeRaw, priced, swaps} = object(value);
+            if (typeof start !== "number" || !Number.isSafeInteger(start) || typeof usdVolumeRaw !== "string" ||
+                !/^\d{1,100}$/.test(usdVolumeRaw)) throw new Error("Invalid volume bucket");
+            if (typeof priced !== "number" || typeof swaps !== "number" || !Number.isSafeInteger(priced) ||
+                !Number.isSafeInteger(swaps) || priced < 0 || priced > swaps) throw new Error("Invalid price coverage");
+            return {start, raw:BigInt(usdVolumeRaw), priced, swaps};
           });
-          setSeries({range:query, points, status:"No stablecoin volume in this period"});
+          setSeries({range:query, points, status:"No priced volume in this period"});
         }
       } catch {
         if (!controller.signal.aborted) setSeries({range:query, points:[], status:"Volume history unavailable"});
@@ -190,12 +192,14 @@ function VolumeCard() {
   }, [query]);
   const current = series?.range === query ? series : undefined;
   const points = current?.points ?? [];
+  const priced = points.reduce((n,p) => n+p.priced,0);
+  const swaps = points.reduce((n,p) => n+p.swaps,0);
   const total = points.reduce((sum, p) => sum + p.raw, BigInt(0));
   const peak = points.reduce((max, p) => p.raw > max ? p.raw : max, BigInt(0));
   const bars = points.map((p,i) => ({
     x:(i + 0.5) * 240 / points.length,
     y:100 - 100 * Number(p.raw) / Number(peak || BigInt(1)),
-    label:new Date(p.start * 1000).toLocaleString() + " · " + formatVolume(p.raw) + " USDC + USDT",
+    label:new Date(p.start * 1000).toLocaleString() + " · $" + formatVolume(p.raw) + " · " + p.priced + "/" + p.swaps + " priced",
   }));
   const line = bars.map(b => b.x + "," + b.y).join(" ");
   return <article className={styles.panel + " " + styles.featurePanel + " " + styles.volumePanel}>
@@ -210,11 +214,11 @@ function VolumeCard() {
       </div>
     </header>
     {picker.form}
-    <div className={styles.featureValue}><strong>{points.length ? formatVolume(total) : "—"}</strong></div>
-    <div className={styles.volumeChanges}><span>USDC + USDT swap volume · {period}</span></div>
+    <div className={styles.featureValue}><strong>{points.length && (priced || !swaps) ? "$"+formatVolume(total) : "—"}</strong></div>
+    <div className={styles.volumeChanges}><span>Estimated USD · {period}{points.length > 0 && ` · ${priced} of ${swaps} swaps priced`}</span></div>
     <div className={styles.volumePlot}>
       <span aria-hidden="true" className={styles.volumeWatermark}>Cadinal</span>
-      {peak > BigInt(0) ? <svg className={styles.volumeSeries} viewBox="0 0 240 100" preserveAspectRatio="none" role="img" aria-label={period + " stablecoin swap volume"}>
+      {peak > BigInt(0) ? <svg className={styles.volumeSeries} viewBox="0 0 240 100" preserveAspectRatio="none" role="img" aria-label={period + " estimated USD swap volume"}>
         {mode === "area" && <polygon points={bars[0]!.x + ",100 " + line + " " + bars[bars.length-1]!.x + ",100"} fill="currentColor" opacity=".25" />}
         {mode !== "bars" && <polyline points={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
         {bars.map((b,i) => <g key={points[i]!.start}>
@@ -227,7 +231,7 @@ function VolumeCard() {
 }
 
 export function AnalyticsDashboard() {
-  const [trades, setTrades] = useState<{swaps: string; traders: string; volume:string; daily:string} | null>(null);
+  const [trades, setTrades] = useState<{swaps: string; traders: string; volume:string; daily:string; coverage:string; dailyCoverage:string} | null>(null);
   const [tradeStatus, setTradeStatus] = useState("Loading confirmed trades");
   useEffect(() => {
     const controller = new AbortController();
@@ -247,7 +251,11 @@ export function AnalyticsDashboard() {
             const [whole, fraction] = value.split(".");
             return BigInt(whole!).toLocaleString("en-US") + (fraction ? "." + fraction : "");
           };
-          setTrades({volume: displayVolume(data.stableVolume), daily: displayVolume(data.stableVolume24h), swaps: BigInt(data.swaps).toLocaleString("en-US"), traders: BigInt(data.traders).toLocaleString("en-US")});
+          if (![data.priced,data.priced24h,data.swaps24h].every(v => typeof v === "string" && /^\d+$/.test(v)) ||
+              [data.usdVolume,data.usdVolume24h].some(v => displayVolume(v) === "—")) throw new Error("Invalid USD metrics");
+          setTrades({volume: data.priced === "0" && data.swaps !== "0" ? "—" : "$"+displayVolume(data.usdVolume),
+            daily: data.priced24h === "0" && data.swaps24h !== "0" ? "—" : "$"+displayVolume(data.usdVolume24h),
+            coverage:`${data.priced} of ${data.swaps} swaps priced`, dailyCoverage:`${data.priced24h} of ${data.swaps24h} swaps priced`, swaps: BigInt(data.swaps).toLocaleString("en-US"), traders: BigInt(data.traders).toLocaleString("en-US")});
           setTradeStatus("Confirmed swaps");
         }
       } catch {
@@ -310,7 +318,7 @@ export function AnalyticsDashboard() {
               24h trading volume
             </span>
             <strong>{trades?.daily ?? "—"}</strong>
-            <small>USDC + USDT swap volume</small>
+            <small>Estimated USD · {trades?.dailyCoverage ?? tradeStatus}</small>
           </article>
           <article className={styles.miniMetric}>
             <span className={styles.metricLabel}>
@@ -373,7 +381,7 @@ export function AnalyticsDashboard() {
           ? new Intl.NumberFormat("en-US").format(BigInt(usersMetric.totalUsers)) : "—"}
         detail={usersMetric.status === "ready" ? `Unique wallets through block ${usersMetric.block}` : usersMetric.status === "indexing" ? "Indexing confirmed swap and LP history" : "Analytics unavailable"}
       />
-      <AllTimeMetric label="Total Volume" value={trades?.volume ?? "—"} detail="USDC + USDT swap volume" />
+      <AllTimeMetric label="Total Volume" value={trades?.volume ?? "—"} detail={`Estimated USD · ${trades?.coverage ?? tradeStatus}`} />
       <AllTimeMetric label="Total Deposits (All Time)" />
       <article className={styles.allTimeMetric}><span>Total Withdrawals (All Time)</span><TokenTotals /></article>
       <div className={styles.allTimeMetric} aria-hidden="true" />
@@ -544,10 +552,10 @@ function TopUsersCard() {
         } else {
           if (data.status !== "ready" || typeof data.hasNext !== "boolean" || !Array.isArray(data.users) || data.users.length > 10) throw new Error("Invalid leaderboard");
           const users = data.users.map(value => {
-            const {wallet, stableVolumeRaw} = object(value);
-            if (typeof wallet !== "string" || !/^0x[0-9a-f]{40}$/i.test(wallet) || typeof stableVolumeRaw !== "string" ||
-                !/^\d{1,100}$/.test(stableVolumeRaw)) throw new Error("Invalid ranked wallet");
-            return {wallet, volume:formatVolume(BigInt(stableVolumeRaw))};
+            const {wallet, usdVolumeRaw} = object(value);
+            if (typeof wallet !== "string" || !/^0x[0-9a-f]{40}$/i.test(wallet) || typeof usdVolumeRaw !== "string" ||
+                !/^\d{1,100}$/.test(usdVolumeRaw)) throw new Error("Invalid ranked wallet");
+            return {wallet, volume:"$"+formatVolume(BigInt(usdVolumeRaw))};
           });
           setResult({page, users, hasNext:data.hasNext, message:"No ranked wallets on this page"});
         }
@@ -565,14 +573,14 @@ function TopUsersCard() {
     <div className={styles.growthHeading}><h2>Top Users By Volume</h2></div>
     <div className={styles.usersTable}>
       <table className={styles.rankedWallets}>
-        <thead><tr><th scope="col">Wallet</th><th scope="col">Volume (USDC + USDT)</th></tr></thead>
+        <thead><tr><th scope="col">Wallet</th><th scope="col">Estimated USD volume</th></tr></thead>
         <tbody>{current?.users.map((user,index) => <tr key={user.wallet}>
           <td title={user.wallet}>{(page-1)*10+index+1}. {user.wallet.slice(0,6)}…{user.wallet.slice(-4)}</td>
           <td>{user.volume}</td>
         </tr>)}</tbody>
       </table>
       {!current?.users.length && <div className={styles.usersEmpty} role="status">{current?.message ?? "Loading wallet rankings"}</div>}
-      <div className={styles.usersTableFoot}><span>All-time stablecoin volume</span><div>
+      <div className={styles.usersTableFoot}><span>All-time priced swaps</span><div>
         <button disabled={page === 1} aria-label="Previous page" onClick={() => setPage(page-1)}>‹</button>
         <span>Page {page}</span>
         <button disabled={!current?.hasNext} aria-label="Next page" onClick={() => setPage(page+1)}>›</button>
