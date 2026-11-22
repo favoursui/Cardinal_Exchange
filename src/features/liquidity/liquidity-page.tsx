@@ -65,7 +65,12 @@ export function LiquidityPageContent() {
   </>}
   {capabilities.error&&<p className={styles.error} role="alert">{capabilities.error}</p>}
   <p className={styles.footer}>LP tokens represent your share of the pool. Fees accrue in pool reserves. Token amounts may change as trades occur.</p>
-  <dialog ref={dialog} className={styles.actionDialog} aria-labelledby="liquidity-action-title" onClose={()=>{setAction(null);trigger.current?.focus();}}>
+  <dialog ref={dialog} className={styles.actionDialog} aria-labelledby="liquidity-action-title" onClose={event=>{
+   // React also delivers close events from the nested transaction review.
+   if(event.target!==event.currentTarget||event.currentTarget.open)return;
+   setAction(null);
+   trigger.current?.focus();
+  }}>
    {action&&<><div className={styles.dialogHeader}><h2 id="liquidity-action-title">{action.mode==='add'?'Add liquidity':'Remove liquidity'}</h2><button className={styles.closeButton} aria-label="Close liquidity form" onClick={()=>dialog.current?.close()}>×</button></div>
    {wallet.account===action.account?<LiquidityForm key={`${action.pool.address}:${action.mode}:${action.account}`} pool={state?.pools.find(p=>p.address===action.pool.address)??action.pool} mode={action.mode} enabled={action.mode==='add'?canAdd:canRemove} onComplete={catalog.refresh}/>:<p role="status" className={styles.notice}>Your wallet changed. Close this form and select the pool again.</p>}
    </>}

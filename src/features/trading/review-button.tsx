@@ -93,16 +93,19 @@ function DetailedReviewButton({intent,enabled,label,onComplete,inline=false,onPr
  };
  let explorer:string|undefined;try{explorer=qmsWalletChain().blockExplorerUrls[0].replace(/\/$/,'');}catch{}
  const expired=review && now>=review.transaction.expiresAt;
+ const depositApproval = review?.approval && captured.current?.intent.kind === 'add';
+ const continueDeposit = depositApproval && status === 'confirmed';
  const content=<>
-   <div className={styles.heading}><h2 id="transaction-review-title">{result?(status==='confirmed'?'Transaction confirmed':status==='reverted'?'Transaction reverted':'Transaction submitted'):review?.title??'Prepare transaction'}</h2><button type="button" disabled={busy} aria-label="Close transaction review" onClick={close}>×</button></div>
+   <div className={styles.heading}><h2 id="transaction-review-title">{result?(continueDeposit?'Token approval confirmed':status==='confirmed'?'Transaction confirmed':status==='reverted'?'Transaction reverted':'Transaction submitted'):review?.title??'Prepare transaction'}</h2><button type="button" disabled={busy} aria-label="Close transaction review" onClick={close}>×</button></div>
    {busy&&<p role="status">{review?'Check your wallet to confirm.':'Checking contracts and preparing transaction…'}</p>}
    {error&&<p role="alert" className={styles.error}>{error}</p>}
    {result?<>
     <p role="status">{statusError?'Status unavailable — check the explorer before continuing.':status?statusLabels[status]:'Checking confirmation…'}</p>
-    <p>{review?.approval?(status==='confirmed'?'Approval confirmed. Prepare again to continue.':'Waiting for approval confirmation before the next step.'):'Your transaction is also saved in History.'}</p>
+    <p>{continueDeposit?'Continue to review the next required approval or the liquidity deposit. Your position appears after the deposit confirms.':review?.approval?(status==='confirmed'?'Approval confirmed. Prepare again to continue.':'Waiting for approval confirmation before the next step.'):'Your transaction is also saved in History.'}</p>
     <p className={styles.hash}>{explorer?<a href={`${explorer}/tx/${result.hash}`} target="_blank" rel="noopener noreferrer">{result.hash} ↗</a>:result.hash}</p>
     {!result.historySaved&&<p role="alert">Browser history could not be saved. Keep the hash above.</p>}
-    <button type="button" className={styles.primary} onClick={close}>Done</button>
+    {continueDeposit ? <button type="button" className={styles.primary} disabled={busy||!intent||!enabled} onClick={()=>void prepare()}>Continue deposit</button> :
+      <button type="button" className={styles.primary} onClick={close}>{depositApproval?'Close':'Done'}</button>}
    </>:<>
     {review&&<><ul className={styles.reviewLines}>{review.lines.map(line=><li key={line}>{line}</li>)}</ul><p className={styles.hash}>Wallet: {review.transaction.from}</p><p className={styles.hint}>QMS Testnet · Review the amount and recipient in your wallet.</p>
     {expired?<p role="status">Review expired. Prepare again for current amounts.</p>:<p className={styles.hint}>Review valid for {Math.max(0,Math.ceil((review.transaction.expiresAt-now)/1000))} seconds.</p>}
